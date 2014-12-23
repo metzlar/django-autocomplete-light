@@ -7,6 +7,16 @@
   src='//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js'>
 </script>
 
+<link rel="stylesheet" href="{% static 'autocomplete_light/ladda-themeless.min.css' %}">
+<script src="{% static 'autocomplete_light/spin.min.js' %}"></script>
+<script src="{% static 'autocomplete_light/ladda.min.js' %}"></script>
+
+<script>
+	$(function(){
+	    Ladda.bind('*.btn');
+	});
+</script>
+
 {% include 'autocomplete_light/static.html' %}
 {{block.super}}
 {% endblock %}
