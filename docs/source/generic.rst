@@ -1,60 +1,64 @@
-AutocompleteGeneric, for GenericForeignKey or GenericManyToMany
-===============================================================
+Generic relations
+=================
+
+First, you need to register an autocomplete class for autocompletes on generic
+relations.
+
+The easiest is to inherit from
+:py:class:`~autocomplete_light.autocomplete.AutocompleteGenericBase`
+or
+:py:class:`~autocomplete_light.autocomplete.AutocompleteGenericTemplate`. The
+main logic is contained in
+:py:class:`~autocomplete_light.autocomplete.generic.AutocompleteGeneric` which
+is extended by both the Base and Template versions.
 
 Generic relation support comes in two flavors:
 
 - for django's generic foreign keys,
-- and for django-generic-m2m's generic many to many in
-  autocomplete_light.contrib.generic_m2m,
+- and for django-generic-m2m's generic many to many.
 
-AutocompleteGeneric
--------------------
+`autocomplete_light.ModelForm` will setup the fields:
 
-Example using :py:class:`AutocompleteGeneric
-<autocomplete_light.autocomplete.generic.AutocompleteGeneric>` as shown in
-``test_project/gfk_autocomplete/autocomplete_light_registry.py``:
+- :py:class:`autocomplete_light.GenericModelChoiceField <autocomplete_light.fields.GenericModelChoiceField>`, and
+- :py:class:`autocomplete_light.GenericModelMultipleChoiceField <autocomplete_light.fields.GenericModelMultipleChoiceField>`.
 
-.. literalinclude:: ../../test_project/gfk_autocomplete/autocomplete_light_registry.py
-   :language: python
+Those fields will use the default generic autocomplete class, which is the last
+one you register as generic. If you want to use several generic autocomplete
+classes, then you should setup the fields yourself to specify the autocomplete
+name as such:
 
-.. _generic-fk:
+.. code-block:: python
 
-GenericModelForm and GenericModelChoiceField
---------------------------------------------
+    class YourModelForm(autocomplete_light.ModelForm):
+        # if your GenericForeignKey name is "generic_fk":
+        generic_fk = autocomplete_light.GenericModelChoiceField('YourAutocomplete1')
 
-Example using :py:class:`GenericModelForm
-<autocomplete_light.generic.GenericModelForm>` and
-:py:class:`GenericModelChoiceField
-<autocomplete_light.generic.GenericModelChoiceField>` as shown in
-``test_project/gfk_autocomplete/forms.py``:
+        # if your RelatedObjectsDescriptor is "generic_m2m":
+        generic_m2m = autocomplete_light.GenericModelMultipleChoiceField('YourAutocomplete2')
 
-.. literalinclude:: ../../test_project/gfk_autocomplete/forms.py
-   :language: python
+But please note that you will :ref:`loose some DRY<dry-break>` by doing that, as stated in the faq.
 
-.. _generic-m2m:
+Example using :py:class:`~autocomplete_light.autocomplete.generic.AutocompleteGenericBase`
+------------------------------------------------------------------------------------------
 
-GenericManyToMany
------------------
+This example demonstrates how to setup a generic autocomplete with 4 models:
 
-Example
-~~~~~~~
+.. code-block:: python
 
-Consider this example model with a generic many-to-many relation descriptor
-``related`` as in ``test_project/generic_m2m_autocomplete/models.py``:
+    class AutocompleteTaggableItems(autocomplete_light.AutocompleteGenericBase):
+        choices = (
+            User.objects.all(),
+            Group.objects.all(),
+            City.objects.all(),
+            Country.objects.all(),
+        )
 
-.. literalinclude:: ../../test_project/generic_m2m_autocomplete/models.py
-   :language: python
+        search_fields = (
+            ('username', 'email'),
+            ('name',),
+            ('search_names',),
+            ('name_ascii',),
+        )
 
-Example :py:class:`GenericModelForm
-<autocomplete_light.contrib.generic_m2m.GenericModelForm>` and
-:py:class:`GenericModelMultipleChoiceField
-<autocomplete_light.contrib.generic_m2m.GenericModelMultipleChoiceField>` usage
-as per ``test_project/generic_m2m_autocomplete/forms.py``:
 
-.. literalinclude:: ../../test_project/generic_m2m_autocomplete/forms.py
-   :language: python
-
-The form defined above can directly be using in the admin:
-
-.. literalinclude:: ../../test_project/generic_m2m_autocomplete/admin.py
-   :language: python
+    autocomplete_light.register(AutocompleteTaggableItems)

@@ -26,15 +26,11 @@ Or install the development version
 
 Install directly from github::
 
-    AUTOCOMPLETE_LIGHT_VERSION="master"
-    CITIES_LIGHT_VERSION="master"
-
     rm -rf autocomplete_light_env/
 
     virtualenv autocomplete_light_env
     source autocomplete_light_env/bin/activate
-    pip install -e git+git://github.com/yourlabs/django-cities-light.git@$CITIES_LIGHT_VERSION#egg=cities_light
-    pip install -e git+git://github.com/yourlabs/django-autocomplete-light.git@$AUTOCOMPLETE_LIGHT_VERSION#egg=autocomplete_light
+    pip install -e git+git://github.com/yourlabs/django-autocomplete-light.git#egg=autocomplete_light
     cd autocomplete_light_env/src/autocomplete-light/test_project
     pip install -r requirements.txt
     ./manage.py runserver

@@ -9,3 +9,5 @@ django_autocomplete_light.egg-info/
 *swp
 docs/docs
 __pycache__
+*.mo
+test_env/

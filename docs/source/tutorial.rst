@@ -1,8 +1,12 @@
-Enable an autocomplete in admin forms in two steps: high level API concepts
----------------------------------------------------------------------------
+Tutorial
+========
+
+.. _quick-start:
 
 :py:func:`autocomplete_light.register() <autocomplete_light.registry.register>` shortcut to generate and register Autocomplete classes
-``````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+--------------------------------------------------------------------------------------------------------------------------------------
+
+.. _register:
 
 Register an Autocomplete for your model in
 ``your_app/autocomplete_light_registry.py``, it can look like this:
@@ -16,20 +20,45 @@ Register an Autocomplete for your model in
     autocomplete_light.register(Person, 
         # Just like in ModelAdmin.search_fields
         search_fields=['^first_name', 'last_name'],
-        # This will actually html attribute data-placeholder which will set
-        # javascript attribute widget.autocomplete.placeholder.
-        autocomplete_js_attributes={'placeholder': 'Other model name ?',},
+        attrs={
+            # This will set the input placeholder attribute:
+            'placeholder': 'Other model name ?',
+            # This will set the yourlabs.Autocomplete.minimumCharacters
+            # options, the naming conversion is handled by jQuery
+            'data-autocomplete-minimum-characters': 1,
+        },
+        # This will set the data-widget-maximum-values attribute on the
+        # widget container element, and will be set to
+        # yourlabs.Widget.maximumValues (jQuery handles the naming
+        # conversion).
+        widget_attrs={
+            'data-widget-maximum-values': 4,
+            # Enable modern-style widget !
+            'class': 'modern-style',
+        },
     )
 
-Because ``PersonAutocomplete`` is registered, :py:meth:`AutocompleteView.get()
+.. note::
+
+    If using **Django >= 1.7**, you might as well do :py:func:`register()
+    <autocomplete_light.registry.register>` calls directly in your
+    ``AppConfig.ready()`` as demonstrated in example app:
+    ``autocomplete_light.example_apps.app_config_without_registry_file``
+
+:py:meth:`AutocompleteView.get()
 <autocomplete_light.views.AutocompleteView.get>` can proxy
 :py:meth:`PersonAutocomplete.autocomplete_html()
-<autocomplete_light.autocomplete.base.AutocompleteInterface.autocomplete_html>`.
-This means that openning ``/autocomplete/PersonAutocomplete/`` will call
+<autocomplete_light.autocomplete.base.AutocompleteInterface.autocomplete_html>`
+because ``PersonAutocomplete`` is registered. This means that openning
+``/autocomplete/PersonAutocomplete/`` will call
 :py:meth:`AutocompleteView.get()
 <autocomplete_light.views.AutocompleteView.get>` which will in turn call
 :py:meth:`PersonAutocomplete.autocomplete_html()
 <autocomplete_light.autocomplete.base.AutocompleteInterface.autocomplete_html>`.
+
+.. digraph:: autocomplete
+
+   "widget HTML" -> "widget JavaScript" -> "AutocompleteView" -> "autocomplete_html()";
 
 Also :py:meth:`AutocompleteView.post()
 <autocomplete_light.views.AutocompleteView.post>` would proxy
@@ -43,7 +72,9 @@ overrides <js-method-override>` like the :ref:`remote autocomplete <remote>`.
     security is explained later in this tutorial in section :ref:`security`.
 
 :py:func:`autocomplete_light.register() <autocomplete_light.registry.register>`
-works by passing the extra keyword arguments like ``search_fields`` to the
+generates an Autocomplete class, passing the extra keyword arguments like
+:py:attr:`AutocompleteModel.search_fields
+<autocomplete_light.autocomplete.model.AutocompleteModel.search_fields>` to the
 Python :py:func:`type` function. This means that extra keyword arguments will
 be used as class attributes of the generated class. An equivalent version of
 the above code would be:
@@ -52,7 +83,6 @@ the above code would be:
 
     class PersonAutocomplete(autocomplete_light.AutocompleteModelBase):
         search_fields = ['^first_name', 'last_name']
-        autocomplete_js_attributes={'placeholder': 'Other model name ?',}
         model = Person
     autocomplete_light.register(PersonAutocomplete)
 
@@ -65,544 +95,95 @@ the above code would be:
     <autocomplete_light.registry.register>` to generate :py:class:`Autocomplete
     <autocomplete_light.autocomplete.base.AutocompleteInterface>` classes.
 
-    It could look like this (in urls.py):
+    It could look like this (in your project's ``urls.py``):
 
     .. code-block:: python
 
         autocomplete_light.registry.autocomplete_model_base = YourAutocompleteModelBase
         autocomplete_light.autodiscover()
 
-:py:func:`modelform_factory() <autocomplete_light.forms.modelform_factory>` shortcut to generate ModelForms in the admin
-````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Refer to the :doc:`autocomplete` documentation for details, it is the first
+chapter of the :ref:`the reference documentation <reference>`.
 
-Make the admin ``Order`` form that uses ``PersonAutocomplete``, in
-``your_app/admin.py``:
+:py:func:`autocomplete_light.modelform_factory() <autocomplete_light.forms.modelform_factory>` shortcut to generate ModelForms in the admin
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+First, ensure that scripts are :ref:`installed in the admin base template <install-scripts-admin>`.
+
+Then, enabling autocompletes in the admin is as simple as  overriding
+:py:attr:`ModelAdmin.form
+<django:django.contrib.admin.ModelAdmin.form>` in
+``your_app/admin.py``. You can use the
+:py:func:`~autocomplete_light.forms.modelform_factory` shortcut as
+such:
 
 .. code-block:: python
-
-    from django.contrib import admin
-    import autocomplete_light
-    from models import Order
 
     class OrderAdmin(admin.ModelAdmin):
         # This will generate a ModelForm
         form = autocomplete_light.modelform_factory(Order)
     admin.site.register(Order)
 
-There are other ways to generate forms, depending on your needs. If you just
-wanted to replace selects in the admin then autocomplete_light's job is done by
-now !
+Refer to the :doc:`form` documentation for other ways of making forms, it is
+the second chapter of the :ref:`the reference documentation <reference>`.
 
-Making Autocomplete classes
----------------------------
+:py:class:`autocomplete_light.ModelForm <autocomplete_light.forms.ModelForm>` to generate Autocomplete fields, the DRY way
+--------------------------------------------------------------------------------------------------------------------------
 
-Create a basic list-backed autocomplete class
-`````````````````````````````````````````````
+First, ensure that :ref:`scripts are properly installed in your
+template <install-scripts>`.
 
-Class attributes are thread safe because
-:py:func:`autocomplete_light.register() <autocomplete_light.registry.register>`
-always create a class copy. So, registering a custom Autocomplete class for
-your model in ``your_app/autocomplete_light_registry.py`` could look like this:
-
-.. code-block:: python
-
-    import autocomplete_light
-
-    class OsAutocomplete(autocomplete_light.AutocompleteListBase):
-        choices = ['Linux', 'BSD', 'Minix']
-
-    autocomplete_light.register(OsAutocomplete)
-
-Using a template to render the autocomplete
-```````````````````````````````````````````
-
-You could use :py:class:`AutocompleteListTemplate
-<autocomplete_light.autocomplete.AutocompleteListTemplate>` instead:
+Then, you can use :py:class:`autocomplete_light.ModelForm
+<autocomplete_light.forms.ModelForm>` to replace automatic
+:py:class:`~django:django.forms.Select` and
+:py:class:`~django:django.forms.SelectMultiple` widgets which renders
+``<select>`` HTML inputs by autocompletion widgets:
 
 .. code-block:: python
 
-    import autocomplete_light
-
-    class OsAutocomplete(autocomplete_light.AutocompleteListTemplate):
-        choices = ['Linux', 'BSD', 'Minix']
-        autocomplete_template = 'your_autocomplete_box.html'
-
-    autocomplete_light.register(OsAutocomplete)
-
-.. note::
-
-    In reality, AutocompleteListBase inherits from both AutocompleteList and
-    AutocompleteBase, and AutocompleteListTemplate inherits from both
-    AutocompleteList and AutocompleteTemplate. It is the same for the other
-    Autocomplete: AutocompleteModel + AutocompleteTemplate =
-    AutocompleteModelTemplate and so on.
-
-Create a basic model autocomplete class
-````````````````````````````````````````
-
-Registering a custom Autocomplete class for your model in
-``your_app/autocomplete_light_registry.py`` can look like this:
-
-.. code-block:: python
-
-    import autocomplete_light
-
-    from models import Person
-
-    class PersonAutocomplete(autocomplete_light.AutocompleteModelBase):
-        search_fields = ['^first_name', 'last_name']
-    autocomplete_light.register(Person, PersonAutocomplete)
-
-.. note::
-
-    An equivalent of this example would be:
-
-    .. code-block:: python
-        
-        autocomplete_light.register(Person, 
-            search_fields=['^first_name', 'last_name'])
-
-.. _security:
-
-Overriding the queryset of a model autocomplete to secure an Autocomplete
-`````````````````````````````````````````````````````````````````````````
-
-You can override any method of the Autocomplete class. Filtering choices based
-on the request user could look like this:
-
-.. code-block:: python
-
-    import autocomplete_light
-
-    from models import Person
-
-    class PersonAutocomplete(autocomplete_light.AutocompleteModelBase):
-        search_fields = ['^first_name', 'last_name'])
-
-        def choices_for_request(self):
-            choices = super(PersonAutocomplete, self).choices_for_request()
-
-            if not self.request.user.is_staff:
-                choices = choices.filter(private=False)
-
-            return choices
-
-    autocomplete_light.register(Person, PersonAutocomplete)
-
-.. info:: The widget prevents a malicious user from crafting choices keys by
-          doing validation even in `render()`. This causes an overhead, any
-          help would be appreciated. Discussion is on:
-          https://github.com/yourlabs/django-autocomplete-light/issues/168
-
-Registering the same Autocomplete class for several autocompletes
-`````````````````````````````````````````````````````````````````
-
-This code registers an autocomplete with name 'ContactAutocomplete':
-
-.. code-block:: python
-
-    autocomplete_light.register(ContactAutocomplete)
-
-To register two autocompletes with the same class, pass in a name argument:
-
-.. code-block:: python
-    
-    autocomplete_light.register(ContactAutocomplete, name='Person', 
-        choices=Person.objects.filter(is_company=False))
-    autocomplete_light.register(ContactAutocomplete, name='Company',
-        choices=Person.objects.filter(is_company=True))
-
-Your own form classes
----------------------
-
-Working around Django bug #9321: `Hold down "Control" ...`
-``````````````````````````````````````````````````````````
-
-If any autocomplete widget renders with a message like 'Hold down "Control" to
-select multiple items at once', it is because of Django bug #9321. A trivial
-fix is to use ``autocomplete_light.FixedModelForm``.
-
-``FixedModelForm`` inherits from ``django.forms.ModelForm`` and only takes care
-or removing this message. It remains compatible and can be used as a drop-in
-replacement for ``ModelForm`.`
-
-Of course, ``FixedModelForm`` is **not** required, but might prove helpful.
-
-Override a default relation select in ``ModelForm.Meta.widgets``
-````````````````````````````````````````````````````````````````
-
-You can override the default relation select as such:
-
-.. code-block:: python
-
-    from django import forms
-
-    import autocomplete_light
-
-    from models import Order, Person
-
-    class OrderForm(forms.ModelForm):
-        class Meta:
-            model = Order
-            widgets = autocomplete_light.get_widgets_dict(Order)
-
-Or in a ``ModelChoiceField`` or similar
-```````````````````````````````````````
-
-Now use ``PersonAutocomplete`` in a ``ChoiceWidget`` ie. for a ``ForeignKey``,
-it can look like this:
-
-.. code-block:: python
-
-    from django import forms
-
-    import autocomplete_light
-
-    from models import Order, Person
-
-    class OrderForm(forms.ModelForm):
-        person = forms.ModelChoiceField(Person.objects.all(),
-            widget=autocomplete_light.ChoiceWidget('PersonAutocomplete'))
-
+    class OrderModelForm(autocomplete_light.ModelForm):
         class Meta:
             model = Order
 
-Using your own form in a ``ModelAdmin``
-```````````````````````````````````````
-
-You can use this form in the admin too, it can look like this:
-
-.. code-block:: python
-
-    from django.contrib import admin
-    
-    from forms import OrderForm
-    from models import Order
-
-    class OrderAdmin(admin.ModelAdmin):
-        form = OrderForm
-    admin.site.register(Order, OrderAdmin)
-
-.. note::
-
-    Ok, this has nothing to do with ``django-autocomplete-light`` because it is
-    plain Django, but still it might be useful to someone.
-
-Using autocomplete widgets in non model-forms
-`````````````````````````````````````````````
-
-There are 3 kinds of widgets:
-
-- ``autocomplete_light.ChoiceWidget`` has a hidden ``<select>`` which works for
-  ``django.forms.ChoiceField``,
-- ``autocomplete_light.MultipleChoiceWidget`` has a hidden ``<select
-  multiple="multiple">`` which works for ``django.forms.MultipleChoiceField``,
-- ``autocomplete_light.TextWidget`` just enables an autocomplete on its
-  ``<input>`` and works for ``django.forms.CharField``.
-
-For example:
+Note that the first Autocomplete class registered for a model becomes the
+default Autocomplete for that model. If you have registered several
+Autocomplete classes for a given model, you probably want to use a different
+Autocomplete class depending on the form using 
+:py:attr:`Meta.autocomplete_names <autocomplete_light.forms.ModelForm.autocomplete_names>`:
 
 .. code-block:: python
 
-    # Using widgets directly in any kind of form.
-    class NonModelForm(forms.Form):
-        user = forms.ModelChoiceField(User.objects.all(),
-            widget=autocomplete_light.ChoiceWidget('UserAutocomplete'))
+    class OrderModelForm(autocomplete_light.ModelForm):
+        class Meta:
+            autocomplete_names = {'company': 'PublicCompanyAutocomplete'}
+            model = Order
 
-        cities = forms.ModelMultipleChoiceField(City.objects.all(),
-            widget=autocomplete_light.MultipleChoiceWidget('CityAutocomplete'))
-
-        tags = forms.CharField(
-            widget=autocomplete_light.TextWidget('TagAutocomplete'))
-
-Overriding a JS option in Python
-````````````````````````````````
-
-Javascript widget options can be set in Python via the ``widget_js_attributes``
-keyword argument. And javascript autocomplete options can be set in Python via
-the ``autocomplete_js_attributes``.
-
-Those can be set either on an Autocomplete class, either using the
-``register()`` shortcut, either via the Widget constructor.
-
-Per Autocomplete class
-<<<<<<<<<<<<<<<<<<<<<<
-
-.. code-block:: python
-    
-    class AutocompleteYourModel(autocomplete_light.AutocompleteModelTemplate):
-        template_name = 'your_app/your_special_choice_template.html'
-
-        autocomplete_js_attributes = {
-            # This will actually data-autocomplete-minimum-characters which
-            # will set widget.autocomplete.minimumCharacters.
-            'minimum_characters': 4, 
-        }
-
-        widget_js_attributes = {
-            # That will set data-max-values which will set widget.maxValues
-            'max_values': 6,
-        }
-
-Per registered Autocomplete
-<<<<<<<<<<<<<<<<<<<<<<<<<<<
+:py:class:`autocomplete_light.ModelForm <autocomplete_light.forms.ModelForm>`
+respects ``Meta.fields`` and ``Meta.exclude``. However, you can enable or
+disable :py:class:`autocomplete_light.ModelForm
+<autocomplete_light.forms.ModelForm>`'s behaviour in the same fashion with
+:py:attr:`Meta.autocomplete_fields <autocomplete_light.forms.ModelForm.autocomplete_fields>`
+and 
+:py:attr:`Meta.autocomplete_exclude <autocomplete_light.forms.ModelForm.autocomplete_exclude>`:
 
 .. code-block:: python
 
-    autocomplete_light.register(City,
-        # Those have priority over the class attributes
-        autocomplete_js_attributes={
-            'minimum_characters': 0, 
-            'placeholder': 'City name ?',
-        }
-        widget_js_attributes = {
-            'max_values': 6,
-        }
-    )
+    class OrderModelForm(autocomplete_light.ModelForm):
+        class Meta:
+            model = Order
+            # only enable autocompletes on 'person' and 'product' fields
+            autocomplete_fields = ('person', 'product')
 
-Per widget
-<<<<<<<<<<
+    class PersonModelForm(autocomplete_light.ModelForm):
+        class Meta:
+            model = Order
+            # do not make 'category' an autocomplete field
+            autocomplete_exclude = ('category',)
 
-.. code-block:: python
+Also, it will automatically enable autocompletes on generic foreign keys and
+generic many to many relations if you have at least one generic Autocomplete
+class register (typically an
+:py:class:`~autocomplete_light.autocomplete.AutocompleteGenericBase`).
 
-    class SomeForm(forms.Form):
-        cities = forms.ModelMultipleChoiceField(City.objects.all(),
-            widget=autocomplete_light.MultipleChoiceWidget('CityAutocomplete',
-                # Those attributes have priority over the Autocomplete ones.
-                autocomplete_js_attributes={'minimum_characters': 0,
-                                            'placeholder': 'Choose 3 cities ...'},
-                widget_js_attributes={'max_values': 3}))
-
-Javascript API concepts
------------------------
-
-django-autocomplete-light provides consistent JS plugins. A concept that
-you understand for one plugin is likely to be appliable for others.
-
-Using ``$.yourlabsAutocomplete`` to create a navigation autocomplete
-````````````````````````````````````````````````````````````````````
-
-If your website has a lot of data, it might be useful to add a search
-input somewhere in the design. For example, there is a search input in
-Facebook's header. You will also notice that the search input in Facebook
-provides an autocomplete which allows to directly navigate to a particular
-object's detail page. This allows a visitor to jump to a particular page with
-very few effort.
-
-Our autocomplete script is designed to support this kind of autocomplete. It
-can be enabled on an input field and query the server for a rendered
-autocomplete with anything like images and nifty design. Just create a view
-that renders just a list of links based on ``request.GET.q``.
-
-Then you can use it to make a global navigation autocomplete using
-``autocomplete.js`` directly.  It can look like this:
-
-.. code-block:: javascript
-    
-    // Make a javascript Autocomplete object and set it up
-    var autocomplete = $('#yourInput').yourlabsAutocomplete({
-        url: '{% url "your_autocomplete_url" %}',
-    });
-
-So when the user clicks on a link of the autocomplete box which is generated by
-your view: it is like if he clicked on a normal link.
-
-.. note::
-
-    This is because ``autocomplete.js`` is simple and stupid, it can't even
-    generate an autocomplete box HTML ! But on the other hand you can use any
-    server side caching or templates that you want ... So maybe it's a good thing ?
-
-Using the ``choiceSelector`` option to enable keyboard navigation
-`````````````````````````````````````````````````````````````````
-
-Because the script doesn't know what HTML the server returns, it is nice to
-tell it how to recognize choices in the autocomplete box HTML::
-
-    $('#yourInput').yourlabsAutocomplete({
-        url: '{% url "your_autocomplete_url" %}',
-        choiceSelector: 'a',
-    });
-
-This will allow to use the keyboard arrows up/down to navigate between choices.
-
-Using the ``selectChoice`` event to enable keyboard choice selection
-````````````````````````````````````````````````````````````````````
-
-``autocomplete.js`` doesn't do anything but trigger ``selectChoice`` on the
-input when a choice is selected either with mouse **or keyboard**, let's enable
-some action:
-
-.. code-block:: javascript
-
-    $('#yourInput').bind('selectChoice', function(e, choice, autocomplete) {
-        window.location.href = choice.attr('href');
-    });
-
-.. note::
-
-    Well, not only doesn't autocomplete.js generate the autocomplete box HTML, but
-    it can't even do anything uppon choice selection ! What a stupid script. On the
-    other hand it does allow to plug in radically different behaviours (ie.
-    ModelChoiceWidget, TextWidget, ...) so maybe it's a good thing.
-
-Combining the above to make a navigation autocomplete for mouse and keyboard
-````````````````````````````````````````````````````````````````````````````
-
-You've learned that you can have a fully functional navigation autocomplete
-like on Facebook with just this:
-
-.. code-block:: javascript
-
-    $('#yourInput').yourlabsAutocomplete({
-        url: '{% url "your_autocomplete_url" %}',
-        choiceSelector: 'a',
-    }).bind('selectChoice', function(e, choice, autocomplete) {
-        window.location.href = choice.attr('href');
-    });
-
-Override autocomplete JS options in JS
-``````````````````````````````````````
-
-The array passed to the plugin function will actually be used to $.extend the
-autocomplete instance, so you can override any option, ie:
-
-.. code-block:: javascript
-
-    $('#yourInput').yourlabsAutocomplete({
-        url: '{% url "your_autocomplete_url" %}',
-        // Hide after 200ms of mouseout
-        hideAfter: 200,
-        // Choices are elements with data-url attribute in the autocomplete
-        choiceSelector: '[data-url]',
-        // Show the autocomplete after only 1 character in the input.
-        minimumCharacters: 1,
-        // Override the placeholder attribute in the input:
-        placeholder: '{% trans 'Type your search here ...' %}',
-        // Append the autocomplete HTML somewhere else:
-        appendAutocomplete: $('#yourElement'),
-        // Override zindex:
-        autocompleteZIndex: 1000,
-    });
-
-.. note::
-
-    The pattern is the same for all plugins provided by django-autocomplete-light.
-
-Override autocomplete JS methods
-````````````````````````````````
-
-Overriding methods works the same, ie:
-
-.. code-block:: javascript
-
-    $('#yourInput').yourlabsAutocomplete({
-        url: '{% url "your_autocomplete_url" %}',
-        choiceSelector: '[data-url]',
-        getQuery: function() {
-            return this.input.val() + '&search_all=' + $('#searchAll').val();
-        },
-        hasChanged: function() {
-            return true; // disable cache
-        },
-    });
-
-.. note::
-
-    The pattern is the same for all plugins provided by django-autocomplete-light.
-
-Overload autocomplete JS methods
-````````````````````````````````
-
-Use `call
-<https://developer.mozilla.org/en/docs/JavaScript/Reference/Global_Objects/Function/call>`_
-to call a parent method. This example automatically selects the choice if there
-is only one:
-
-.. code-block:: javascript
-
-    $(document).ready(function() {
-        var autocomplete = $('#id_city_text').yourlabsAutocomplete();
-        autocomplete.show = function(html) {
-            yourlabs.Autocomplete.prototype.show.call(this, html)
-            var choices = this.box.find(this.choiceSelector);
-
-            if (choices.length == 1) {
-                this.input.trigger('selectChoice', [choices, this]);
-            }
-        }
-    });
-
-Get an existing autocomplete object and chain autocompletes
-```````````````````````````````````````````````````````````
-
-You can use the jQuery plugin ``yourlabsAutocomplete()`` to get an existing
-autocomplete object. Which makes chaining autocompletes with other form fields
-as easy as:
-
-.. code-block:: javascript
-    
-    $('#country').change(function() {
-        $('#yourInput').yourlabsAutocomplete().data = {
-            'country': $(this).val();
-        }
-    });
-
-.. _js-method-override:
-
-Overriding widget JS methods
-````````````````````````````
-
-The widget js plugin will only bootstrap widgets which have
-``data-bootstrap="normal"``. Which means that you should first name your new
-bootstrapping method to ensure that the default behaviour doesn't get in the
-way. 
-
-.. code-block:: python
-
-    autocomplete_light.register(City, 
-        widget_js_attributes={'bootstrap': 'your-custom-bootstrap'})
-
-.. note::
-
-    You could do this at various level, by setting the ``bootstrap`` argument
-    on a widget instance, via ``register()`` or directly on an autocomplete
-    class. See Overriding JS options in Python for details.
-
-Now, you can instanciate the widget yourself like this:
-
-.. code-block:: javascript
-
-    $(document).bind('yourlabsWidgetReady', function() {
-        $('.your.autocomplete-light-widget[data-bootstrap=your-custom-bootstrap]').live('initialize', function() {
-            $(this).yourlabsWidget({
-                // Override options passed to $.yourlabsAutocomplete() from here
-                autocompleteOptions: {
-                    url: '{% url "your_autocomplete_url" %}',
-                    // Override any autocomplete option in this array if you want
-                    choiceSelector: '[data-id]',
-                },
-                // Override some widget options, allow 3 choices:
-                maxValues: 3,
-                // or method:
-                getValue: function(choice) {
-                    // This is the method that returns the value to use for the
-                    // hidden select option based on the HTML of the selected
-                    // choice.
-                    //  
-                    // This is where you could make a non-async post request to
-                    // this.autocomplete.url for example. The default is:
-                    return choice.data('id')
-                },
-            })
-        });
-    });
-
-You can use the remote autocomplete as an example.
-
-.. note::
-
-    You could of course call ``$.yourlabsWidget()`` directly, but using the
-    ``yourlabsWidgetReady`` event takes advantage of the built-in
-    DOMNodeInserted event: your widgets will also work with dynamically created
-    widgets (ie. admin inlines).
+For more documentation, continue reading :ref:`the reference documentation
+<reference>`.

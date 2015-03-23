@@ -1,11 +1,13 @@
-import unittest
+from __future__ import unicode_literals
 
+import autocomplete_light  # noqa
+from django import forms  # noqa
 from django import http
-from django import forms
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User, Group, Permission
+from django.test import TestCase
+from six import text_type
 
-import autocomplete_light
+from ...example_apps.autocomplete_test_case_app.models import Group, User
 
 
 def make_get_request(query=''):
@@ -14,35 +16,24 @@ def make_get_request(query=''):
     return request
 
 
-class AutocompleteTestCase(unittest.TestCase):
+class AutocompleteTestCase(TestCase):
     autocomplete_mock = None
+    fixtures = ['autocomplete_model_test_case']
 
-    def setUpAuth(self):
+    def setUp(self):
         self.user_ctype = ContentType.objects.get_for_model(User)
         self.group_ctype = ContentType.objects.get_for_model(Group)
 
-        User.objects.all().delete()
-        self.abe = User(username='Abe', email='sales@example.com')
-        self.jack = User(username='Jack', email='jack@example.com')
-        self.james = User(username='James', email='sales@example.com')
-        self.john = User(username='John', email='sales@example.com')
-        self.elton = User(username='Elton', email='elton@example.com', pk=10)
+        self.rockers = Group.objects.get(name='rockers')
+        self.bluesmen = Group.objects.get(name='bluesmen')
+        self.jazzmen = Group.objects.get(name='jazzmen')
+        self.emos = Group.objects.get(name='emos')
 
-        self.abe.save()
-        self.jack.save()
-        self.james.save()
-        self.john.save()
-
-        Group.objects.all().delete()
-        self.rockers = Group(name='rockers')
-        self.bluesmen = Group(name='bluesmen')
-        self.jazzmen = Group(name='jazzmen')
-        self.emos = Group(name='emos', pk=10)
-
-        self.rockers.save()
-        self.bluesmen.save()
-        self.jazzmen.save()
-        self.emos.save()
+        self.abe = User.objects.get(username='Abe')
+        self.jack = User.objects.get(username='Jack')
+        self.james = User.objects.get(username='James')
+        self.john = User.objects.get(username='John')
+        self.elton = User.objects.get(username='Elton')
 
     def assert_choices_equal(self, result, test):
         self.assertEqual(result, test['expected'],
@@ -70,7 +61,7 @@ class AutocompleteTestCase(unittest.TestCase):
 
     def assert_validate_success(self, result, test):
         self.assertEqual(result, test['expected'],
-            u'Got %s for test %s %s' % (result, self.__class__.__name__,
+            'Got %s for test %s %s' % (result, self.__class__.__name__,
                 test))
 
     def test_validate(self):
@@ -93,7 +84,7 @@ class AutocompleteTestCase(unittest.TestCase):
 
     def assert_html_equals(self, result, test):
         self.assertEqual(result, test['expected'],
-            u'Got %s for test %s %s' % (result, self.__class__.__name__,
+            'Got %s for test %s %s' % (result, self.__class__.__name__,
                 test))
 
     def test_widget(self):
@@ -112,20 +103,19 @@ class AutocompleteTestCase(unittest.TestCase):
             try:
                 valid = form.is_valid()
             except TypeError:
-                print self.__class__, test, self.get_widget_tests()
+                print(self.__class__, test, self.get_widget_tests())
                 raise
 
             self.assertEqual(
                 valid, test['expected_valid'],
-                u'Unexepected valid: %s for test %s %s' % (
+                'Unexepected valid: %s for test %s %s' % (
                     valid, self.__class__.__name__, test)
             )
 
             if valid:
                 data = form.cleaned_data['x']
 
-                self.assertEqual(
-                    str(data), str(test['expected_data']),
-                    u'Unexepected data: %s for test %s %s' % (
+                self.assertEqual(text_type(data), text_type(test['expected_data']),
+                    'Unexepected data: %s for test %s %s' % (
                         data, self.__class__.__name__, test)
                 )

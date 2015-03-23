@@ -1,4 +1,10 @@
+from __future__ import unicode_literals
+import six
+
+from django.utils.encoding import force_text
 from django.db.models import Q
+
+from ..settings import DEFAULT_SEARCH_FIELDS
 
 __all__ = ('AutocompleteModel', )
 
@@ -7,25 +13,38 @@ class AutocompleteModel(object):
     """
     Autocomplete which considers choices as a queryset.
 
-    choices
+    .. py:attribute:: choices
+
         A queryset.
-    limit_choices
+
+    .. py:attribute:: limit_choices
+
         Maximum number of choices to display.
-    search_fields
-        Fields to search in, configurable like on ModelAdmin.search_fields.
-    split_words
+
+    .. py:attribute:: search_fields
+
+        Fields to search in, configurable like on
+        :py:attr:`django:django.contrib.admin.ModelAdmin.search_fields`
+
+    .. py:attribute:: split_words
+
         If True, AutocompleteModel splits the search query into words and
         returns all objects that contain each of the words, case insensitive,
-        where each word must be in at least one of search_fields.
+        where each word must be in at least one of search_fields. This mimics
+        the mechanism of django's
+        :py:attr:`django:django.contrib.admin.ModelAdmin.search_fields`.
+
         If 'or', AutocompleteModel does the same but returns all objects that
         contain **any** of the words.
-    order_by
+
+    .. py:attribute:: order_by
+
         If set, it will be used to order choices. It can be a single field name
         or an iterable (ie. list, tuple).
     """
     limit_choices = 20
     choices = None
-    search_fields = None
+    search_fields = DEFAULT_SEARCH_FIELDS
     split_words = False
     order_by = None
 
@@ -37,38 +56,41 @@ class AutocompleteModel(object):
 
     def choice_label(self, choice):
         """
-        Return the unicode representation of the choice by default.
+        Return the textual representation of the choice by default.
         """
-        return unicode(choice)
+        return force_text(choice)
 
     def order_choices(self, choices):
         """
-        Order choices using `order_by` option if it is set.
+        Order choices using :py:attr:`order_by` option if it is set.
         """
         if self.order_by is None:
             return choices
 
-        if isinstance(self.order_by, basestring):
+        if isinstance(self.order_by, six.string_types):
             return choices.order_by(self.order_by)
 
         return choices.order_by(*self.order_by)
 
     def choices_for_values(self):
         """
-        Return ordered choices which pk are in self.values.
+        Return ordered choices which pk are in
+        :py:attr:`~.base.AutocompleteInterface.values`.
         """
         assert self.choices is not None, 'choices should be a queryset'
         return self.order_choices(self.choices.filter(
-            pk__in=self.values or []))
+            pk__in=[x for x in self.values if x]))
 
     def choices_for_request(self):
         """
-        Return a queryset based on `choices` using options `split_words`,
-        `search_fields` and `limit_choices`. Refer to the class-level
-        documentation for documentation on each of these options.
+        Return a queryset based on :py:attr:`choices` using options
+        :py:attr:`split_words`, :py:attr:`search_fields` and
+        :py:attr:`limit_choices`.
         """
         assert self.choices is not None, 'choices should be a queryset'
         assert self.search_fields, 'autocomplete.search_fields must be set'
+        assert not isinstance(self.search_fields, six.string_types), \
+            'autocomplete.search_fields must not be a string'
         q = self.request.GET.get('q', '')
         exclude = self.request.GET.getlist('exclude')
 
@@ -122,6 +144,6 @@ class AutocompleteModel(object):
 
     def validate_values(self):
         """
-        Return True if all values where found in `choices`.
+        Return True if all values where found in :py:attr:`choices`.
         """
         return len(self.choices_for_values()) == len(self.values)

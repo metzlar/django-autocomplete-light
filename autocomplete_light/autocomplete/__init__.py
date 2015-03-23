@@ -1,4 +1,4 @@
-from .base import AutocompleteBase
+from .base import AutocompleteBase, AutocompleteInterface
 from .list import AutocompleteList
 from .model import AutocompleteModel
 from .choice_list import AutocompleteChoiceList
@@ -11,8 +11,14 @@ class AutocompleteListBase(AutocompleteList, AutocompleteBase):
     """
     Use :py:class:`~base.AutocompleteBase` for rendering logic and
     :py:class:`~list.AutocompleteList` for business logic.
+    """
+    pass
 
-    .. FIXME: sphinx autodoc can't find AutocompleteList
+
+class AutocompleteListTemplate(AutocompleteList, AutocompleteTemplate):
+    """
+    Use :py:class:`~template.AutocompleteTemplate` for rendering logic and
+    :py:class:`~list.AutocompleteList` for business logic.
     """
     pass
 
@@ -22,6 +28,15 @@ class AutocompleteChoiceListBase(AutocompleteChoiceList, AutocompleteBase):
     Use :py:class:`~base.AutocompleteBase` for rendering logic and
     :py:class:`~choice_list.AutocompleteChoiceList` for
     business logic.
+    """
+    pass
+
+
+class AutocompleteChoiceListTemplate(AutocompleteChoiceList,
+        AutocompleteTemplate):
+    """
+    Use :py:class:`~template.AutocompleteTemplate` for rendering logic and
+    :py:class:`~choice_list.AutocompleteChoiceList` for business logic.
     """
     pass
 

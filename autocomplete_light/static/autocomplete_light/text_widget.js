@@ -21,27 +21,31 @@ For now, the script is composed of these parts:
 jQuery.fn.getSelectionStart = function(){
     // Written by jQuery4U
     // http://www.jquery4u.com/snippets/6-jquery-cursor-functions/#.UDPQ9xXtFw8
-    if(this.lengh == 0) return -1;
-    input = this[0];
- 
-    var pos = input.value.length;
- 
-    if (input.createTextRange) {
-        var r = document.selection.createRange().duplicate();
-        r.moveEnd('character', input.value.length);
-        if (r.text == '')
-        pos = input.value.length;
-        pos = input.value.lastIndexOf(r.text);
-    } else if(typeof(input.selectionStart)!="undefined")
-    pos = input.selectionStart;
- 
-    return pos;
+    if(this.lengh == 0) return -1;
+    input = this[0];
+
+    var pos = input.value.length;
+
+    if (input.createTextRange) {
+        if (window.getSelection) {
+            var r = window.getSelection(); //IE11
+        } else {
+            var r = document.selection.createRange().duplicate();
+            r.moveEnd('character', input.value.length);
+        }
+        if (r.text == '')
+            pos = input.value.length;
+        pos = input.value.lastIndexOf(r.text);
+    } else if(typeof(input.selectionStart)!="undefined")
+    pos = input.selectionStart;
+
+    return pos;
 }
 
 jQuery.fn.getCursorPosition = function(){
     // Written by jQuery4U
-    if(this.lengh == 0) return -1;
-    return $(this).getSelectionStart();
+    if(this.lengh == 0) return -1;
+    return $(this).getSelectionStart();
 }
 
 // Return the word on which the cursor is on.
@@ -138,7 +142,7 @@ yourlabs.TextWidget.prototype.selectChoice = function(choice) {
 
 // Return the value of an HTML choice, used to fill the input.
 yourlabs.TextWidget.prototype.getValue = function(choice) {
-    return choice.html();
+    return $.trim(choice.html().replace(/(<([^>]+)>)/ig,""));
 }
 
 // Initialize the widget.
@@ -150,7 +154,7 @@ yourlabs.TextWidget.prototype.initialize = function() {
 // Destroy the widget. Takes a widget element because a cloned widget element
 // will be dirty, ie. have wrong .input and .widget properties.
 yourlabs.TextWidget.prototype.destroy = function(input) {
-    input 
+    input
         .unbind('selectChoice')
         .yourlabsAutocomplete('destroy');
 }
@@ -190,6 +194,8 @@ $.fn.yourlabsTextWidget = function(overrides) {
             if (!key) continue;
 
             if (key.substr(0, 12) == 'autocomplete') {
+                if (key == 'autocomplete') continue;
+
                 var newKey = key.replace('autocomplete', '');
                 newKey = newKey.replace(newKey[0], newKey[0].toLowerCase())
                 dataOverrides['autocompleteOptions'][newKey] = data[key];
@@ -218,11 +224,12 @@ $.fn.yourlabsTextWidget = function(overrides) {
 }
 
 $(document).ready(function() {
-    $('body').on('initialize', 'input[data-bootstrap=normal]', function() {
+    $('body').on('initialize', 'input[data-widget-bootstrap=text]', function() {
         /*
-        Only setup autocompletes on inputs which have data-bootstrap=normal,
-        if you want to initialize some autocompletes with custom code, then set
-        data-boostrap=yourbootstrap or something like that.
+        Only setup autocompletes on inputs which have
+        data-widget-bootstrap=text, if you want to initialize some
+        autocompletes with custom code, then set
+        data-widget-boostrap=yourbootstrap or something like that.
         */
         $(this).yourlabsTextWidget();
     });
@@ -230,7 +237,7 @@ $(document).ready(function() {
     // Solid initialization, usage::
     //
     //      $(document).bind('yourlabsTextWidgetReady', function() {
-    //          $('body').on('initialize', 'input[data-bootstrap=normal]', function() {
+    //          $('body').on('initialize', 'input[data-widget-bootstrap=text]', function() {
     //              $(this).yourlabsTextWidget({
     //                  yourCustomArgs: // ...
     //              })

@@ -1,7 +1,9 @@
 import unittest
 
+import django
 from django.contrib.auth.models import User
 from django.db import models
+from django.test import TestCase
 
 import autocomplete_light
 
@@ -27,7 +29,7 @@ class Generic(autocomplete_light.AutocompleteGenericBase):
     )
 
 
-class RegistryTestCase(unittest.TestCase):
+class RegistryTestCase(TestCase):
     def setUp(self):
         self.registry = autocomplete_light.AutocompleteRegistry()
 
@@ -46,7 +48,7 @@ class RegistryTestCase(unittest.TestCase):
     def test_unregister(self):
         self.registry.register(Bar)
         self.registry.unregister('Bar')
-        self.assertEqual(self.registry.keys(), [])
+        self.assertEqual(list(self.registry.keys()), [])
 
     def test_register_with_kwargs(self):
         choices = ['foo']
@@ -94,3 +96,71 @@ class RegistryTestCase(unittest.TestCase):
             self.fail('Should raise AutocompleteNotRegistered')
         except autocomplete_light.AutocompleteNotRegistered:
             pass
+
+    def test_raise_NoGenericAutocompleteRegistered(self):
+        self.assertRaises(autocomplete_light.NoGenericAutocompleteRegistered,
+                          self.registry.autocomplete_for_generic)
+
+    def test_autocomplete_for_model(self):
+        class FirstAutocomplete(autocomplete_light.AutocompleteModelBase):
+            pass
+
+        class SecondAutocomplete(autocomplete_light.AutocompleteModelBase):
+            pass
+
+        self.registry.register(Foo, FirstAutocomplete)
+        self.registry.register(Foo, SecondAutocomplete)
+
+        self.assertTrue(issubclass(
+            self.registry.autocomplete_for_model(Foo), FirstAutocomplete))
+
+    def test_autocomplete_for_generic(self):
+        class FirstAutocomplete(Generic):
+            pass
+
+        class SecondAutocomplete(Generic):
+            pass
+
+        self.registry.register(FirstAutocomplete)
+        self.registry.register(SecondAutocomplete)
+
+        self.assertTrue(issubclass(
+            self.registry.autocomplete_for_generic(), FirstAutocomplete))
+
+
+class RegistryGetAutocompleteFromArgTestCase(TestCase):
+    def setUp(self):
+        self.registry = autocomplete_light.AutocompleteRegistry()
+        self.registry.register(Foo)
+        self.registry.register(Generic)
+
+    def test_from_string(self):
+        a = self.registry.get_autocomplete_from_arg('FooAutocomplete')
+        self.assertEqual(a.model, Foo)
+
+    def test_from_model(self):
+        a = self.registry.get_autocomplete_from_arg(Foo)
+        self.assertEqual(a.model, Foo)
+
+    def test_from_model_instance(self):
+        a = self.registry.get_autocomplete_from_arg(Foo())
+        self.assertEqual(a.model, Foo)
+
+    def test_from_autocomplete_instance(self):
+        a = self.registry.get_autocomplete_from_arg(Generic)
+        self.assertEqual(a, Generic)
+
+    def test_default_generic(self):
+        a = self.registry.get_autocomplete_from_arg()
+        self.assertTrue(issubclass(a, Generic))
+
+
+@unittest.skipIf(django.VERSION < (1, 7), 'require django 1.7')
+class AppConfigSupportTestCase(TestCase):
+    def test_appconfig_with_registry_file(self):
+        self.assertIsInstance(autocomplete_light.registry['AppConfigWithRegistryAutocomplete'](),
+                             autocomplete_light.AutocompleteListBase)
+
+    def test_appconfig_without_registry_file(self):
+        self.assertIsInstance(autocomplete_light.registry['AppConfigWithoutRegistryAutocomplete'](),
+                              autocomplete_light.AutocompleteListBase)

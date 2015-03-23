@@ -1,7 +1,12 @@
+from __future__ import unicode_literals
+
+from django.utils.encoding import force_text
 from django.core import urlresolvers
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
+
+import six
 
 __all__ = ('AutocompleteInterface', 'AutocompleteBase')
 
@@ -40,10 +45,13 @@ class AutocompleteInterface(object):
     def __init__(self, request=None, values=None):
         self.request = request
 
-        if hasattr(values, '__iter__'):
-            self.values = values
-        else:
+        if values is None:
+            self.values = []
+        elif (isinstance(values, six.string_types) or
+                not hasattr(values, '__iter__')):
             self.values = [values]
+        else:
+            self.values = values
 
     def autocomplete_html(self):
         """
@@ -98,7 +106,7 @@ class AutocompleteBase(AutocompleteInterface):
         :py:meth:`~.base.AutocompleteBase.choice_value` and
         :py:meth:`~.base.AutocompleteBase.choice_label`. Default is::
 
-            <span class="div" data-value="%s">%s</span>
+            <span data-value="%s">%s</span>
 
     .. py:attribute:: empty_html_format
 
@@ -106,7 +114,7 @@ class AutocompleteBase(AutocompleteInterface):
         match the current request. It takes a parameter for the translated
         message. Default is::
 
-            <span class="div"><em>%s</em></span>
+            <span class="block"><em>%s</em></span>
 
     .. py:attribute:: autocomplete_html_format
 
@@ -120,11 +128,33 @@ class AutocompleteBase(AutocompleteInterface):
 
         Name of the url to add another choice via a javascript popup. If empty
         then no "add another" link will appear.
+
+    .. py:attribute:: add_another_url_kwargs
+
+        Keyword arguments to use when reversing the add another url.
+
+    .. py:attribute:: widget_template
+
+        A special attribute used only by the widget. If it is set, the widget
+        will use that instead of the default
+        ``autocomplete_light/widget.html``.
     """
-    choice_html_format = u'<span class="div" data-value="%s">%s</span>'
-    empty_html_format = u'<span class="div"><em>%s</em></span>'
-    autocomplete_html_format = u'%s'
+    choice_html_format = '<span data-value="%s">%s</span>'
+    empty_html_format = '<span class="block"><em>%s</em></span>'
+    autocomplete_html_format = '%s'
     add_another_url_name = None
+    add_another_url_kwargs = None
+
+    def get_add_another_url(self):
+        """
+        Return the url to use when adding another element
+        """
+        if self.add_another_url_name:
+            url = urlresolvers.reverse(self.add_another_url_name,
+                                       kwargs=self.add_another_url_kwargs)
+            return url + '?_popup=1'
+        else:
+            return None
 
     def choices_for_request(self):
         """
@@ -151,15 +181,13 @@ class AutocompleteBase(AutocompleteInterface):
         by :py:meth:`~.base.AutocompleteBase.choices_for_request`, and
         wrap that in :py:attr:`autocomplete_html_format`.
         """
-        html = []
-
-        for choice in self.choices_for_request():
-            html.append(self.choice_html(choice))
+        html = ''.join(
+            [self.choice_html(c) for c in self.choices_for_request()])
 
         if not html:
             html = self.empty_html_format % _('no matches found').capitalize()
 
-        return self.autocomplete_html_format % ''.join(html)
+        return self.autocomplete_html_format % html
 
     def choice_html(self, choice):
         """
@@ -174,11 +202,11 @@ class AutocompleteBase(AutocompleteInterface):
         Return the value of a choice. This simple implementation returns the
         textual representation.
         """
-        return unicode(choice)
+        return force_text(choice)
 
     def choice_label(self, choice):
         """
         Return the human-readable representation of a choice. This simple
         implementation returns the textual representation.
         """
-        return unicode(choice)
+        return force_text(choice)

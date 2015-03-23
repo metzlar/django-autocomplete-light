@@ -1,7 +1,10 @@
-from .case import *
+from __future__ import unicode_literals
 
+from cities_light.models import City
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User, Group, Permission
+
+from ...example_apps.autocomplete_test_case_app.models import Group, User
+from .case import *
 
 
 class AutocompleteGenericMock(autocomplete_light.AutocompleteGenericBase):
@@ -24,9 +27,6 @@ class FormMock(forms.Form):
 
 class AutocompleteGenericTestCase(AutocompleteTestCase):
     autocomplete_mock = AutocompleteGenericMock
-
-    def setUp(self):
-        self.setUpAuth()
 
     def assert_choices_equal(self, result, test):
         self.assertEqual(list(result), test['expected'])
@@ -132,7 +132,12 @@ class AutocompleteGenericTestCase(AutocompleteTestCase):
             {
                 'form_class': FormMock,
                 'fixture': 'x=%s-2' % ContentType.objects.get_for_model(
-                    Permission).pk,
+                    City).pk,
                 'expected_valid': False,
             },
         )
+
+    def test_default_search_fields(self):
+        class MyGeneric(autocomplete_light.AutocompleteGenericBase):
+            choices = [Group.objects.all()]
+        self.assertEqual(MyGeneric.search_fields, [('name',)])

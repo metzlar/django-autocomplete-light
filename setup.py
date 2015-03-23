@@ -13,7 +13,7 @@ def read(fname):
 
 
 class RunTests(Command):
-    description = "Run the django test suite from the testproj dir."
+    description = "Run the django test suite from the test_project dir."
 
     user_options = []
 
@@ -28,38 +28,21 @@ class RunTests(Command):
         testproj_dir = os.path.join(this_dir, "test_project")
         os.chdir(testproj_dir)
         sys.path.append(testproj_dir)
-        from django.core.management import execute_manager
+        from django.core.management import execute_from_command_line
         os.environ["DJANGO_SETTINGS_MODULE"] = 'test_project.settings'
-        settings_file = os.environ["DJANGO_SETTINGS_MODULE"]
-        settings_mod = __import__(settings_file, {}, {}, [''])
-        execute_manager(settings_mod, argv=[
-            __file__, "test", "autocomplete_light"])
+        execute_from_command_line(argv=[ __file__, "test",
+                        "autocomplete_light"])
         os.chdir(this_dir)
 
 if 'sdist' in sys.argv:
-    # clear compiled mo files before building the distribution
-    walk = os.walk(os.path.join(os.getcwd(), 'autocomplete_light/locale'))
-    for dirpath, dirnames, filenames in walk:
-        if not filenames:
-            continue
-
-        if 'django.mo' in filenames:
-            os.unlink(os.path.join(dirpath, 'django.mo'))
-else:
-    # if django is there, compile the po files to mo,
-    try:
-        import django
-    except ImportError:
-        pass
-    else:
-        dir = os.getcwd()
-        os.chdir(os.path.join(dir, 'autocomplete_light'))
-        os.system('django-admin.py compilemessages')
-        os.chdir(dir)
+    dir = os.getcwd()
+    os.chdir(os.path.join(dir, 'autocomplete_light'))
+    os.system('django-admin.py compilemessages')
+    os.chdir(dir)
 
 setup(
     name='django-autocomplete-light',
-    version='1.4.7',
+    version='2.0.9',
     description='Fresh autocompletes for Django',
     author='James Pic',
     author_email='jamespic@gmail.com',
@@ -71,6 +54,21 @@ setup(
     license='MIT',
     keywords='django autocomplete',
     cmdclass={'test': RunTests},
+    install_requires=[
+        'six>=1.4',
+    ],
+    extras_require={
+        'Tags': 'django-taggit',
+        'Generic m2m': 'django-generic-m2m',
+    },
+    tests_require=[
+        'django',
+        'selenium',
+        'django-cities-light',
+        'mock',
+        'lxml',
+        'cssselect',
+    ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
@@ -80,6 +78,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]

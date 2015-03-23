@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 """
 The registry module provides tools to maintain a registry of autocompletes.
 
@@ -17,11 +19,19 @@ It looks like this:
 
     Module-level instance of :py:class:`AutocompleteRegistry`.
 """
+import six
 
 from django.db import models
 
-from .autocomplete import AutocompleteModelBase
-from .exceptions import AutocompleteNotRegistered
+from .autocomplete import AutocompleteModelBase, AutocompleteInterface
+from .exceptions import (AutocompleteNotRegistered,
+                         AutocompleteArgNotUnderstood,
+                         NoGenericAutocompleteRegistered)
+
+try:
+    from django.utils.module_loading import autodiscover_modules
+except ImportError:
+    autodiscover_modules = None
 
 __all__ = ('AutocompleteRegistry', 'registry', 'register', 'autodiscover')
 
@@ -35,7 +45,13 @@ class AutocompleteRegistry(dict):
 
         The default model autocomplete class to use when registering a Model
         without Autocomplete class. Default is
-        :py:class:`~.autocomplete.AutocompleteModelBase`
+        :py:class:`~.autocomplete.AutocompleteModelBase`. You can override
+        it just before calling autodiscover() in urls.py as such::
+
+            import autocomplete_light
+            autocomplete_light.registry.autocomplete_model_base = \
+                autocomplete_light.AutocompleteModelTemplate
+            autocomplete_light.autodiscover()
     """
 
     def __init__(self, autocomplete_model_base=None):
@@ -45,6 +61,7 @@ class AutocompleteRegistry(dict):
         AutocompleteRegistry.
         """
         self._models = {}
+        self.default_generic = None
         self.autocomplete_model_base = autocomplete_model_base
 
         if self.autocomplete_model_base is None:
@@ -59,13 +76,20 @@ class AutocompleteRegistry(dict):
         except KeyError:
             return
 
+    def autocomplete_for_generic(self):
+        """ Return the default generic autocomplete. """
+        if self.default_generic is None:
+            raise NoGenericAutocompleteRegistered(self)
+
+        return self.default_generic
+
     def unregister(self, name):
         """ Unregister a autocomplete given a name. """
         autocomplete = self[name]
         del self[name]
 
         try:
-            if autocomplete.choices.model:
+            if self._models[autocomplete.choices.model].name == name:
                 del self._models[autocomplete.choices.model]
         except AttributeError:
             pass
@@ -117,11 +141,14 @@ class AutocompleteRegistry(dict):
                 pass
 
         if model:
-            self._register_model_autocomplete(model, autocomplete, **kwargs)
+            autocomplete = self._register_model_autocomplete(model,
+                autocomplete, **kwargs)
         else:
             name = kwargs.get('name', autocomplete.__name__)
-            autocomplete = type(name, (autocomplete,), kwargs)
+            autocomplete = type(str(name), (autocomplete,), kwargs)
             self._register_autocomplete(autocomplete)
+
+        return autocomplete
 
     def _register_model_autocomplete(self, model, autocomplete=None,
                                     name=None, **kwargs):
@@ -148,21 +175,31 @@ class AutocompleteRegistry(dict):
             try:
                 model._meta.get_field('name')
             except:
-                raise Exception(u'Add search_fields kwargs to .register(%s)'
-                    % model.__name__)
+                raise Exception('Add search_fields kwargs to .register(%s)'
+                                % model.__name__)
             else:
                 kwargs['search_fields'] = ['name']
 
-        autocomplete = type(name, (base,), kwargs)
+        kwargs.update({'model': model})
+
+        autocomplete = type(str(name), (base,), kwargs)
 
         self._register_autocomplete(autocomplete)
-        self._models[model] = autocomplete
+
+        if model not in self._models.keys():
+            self._models[model] = autocomplete
+
+        return autocomplete
 
     def _register_autocomplete(self, autocomplete):
         """
         Register a autocomplete without model, like a generic autocomplete.
         """
         self[autocomplete.__name__] = autocomplete
+
+        if not getattr(autocomplete, 'model', False):
+            if not self.default_generic:
+                self.default_generic = autocomplete
 
     def __getitem__(self, name):
         """
@@ -174,6 +211,20 @@ class AutocompleteRegistry(dict):
         except KeyError:
             raise AutocompleteNotRegistered(name, self)
 
+    def get_autocomplete_from_arg(self, arg=None):
+        if isinstance(arg, six.string_types):
+            return self[arg]
+        elif isinstance(arg, type) and issubclass(arg, models.Model):
+            return self.autocomplete_for_model(arg)
+        elif isinstance(arg, models.Model):
+            return self.autocomplete_for_model(arg.__class__)
+        elif isinstance(arg, type) and issubclass(arg, AutocompleteInterface):
+            return arg
+        elif arg is None:
+            return self.default_generic
+        else:
+            raise AutocompleteArgNotUnderstood(arg, self)
+
 
 def _autodiscover(registry):
     """See documentation for autodiscover (without the underscore)"""
@@ -184,6 +235,7 @@ def _autodiscover(registry):
 
     for app in settings.INSTALLED_APPS:
         mod = import_module(app)
+
         # Attempt to import the app's admin module.
         try:
             before_import_registry = copy.copy(registry)
@@ -234,7 +286,10 @@ def autodiscover():
     :py:meth:`AutocompleteRegistry.register()` for details on how these
     autocomplete classes are generated.
     """
-    _autodiscover(registry)
+    if autodiscover_modules:
+        autodiscover_modules('autocomplete_light_registry')
+    else:
+        _autodiscover(registry)
 
 
 def register(*args, **kwargs):

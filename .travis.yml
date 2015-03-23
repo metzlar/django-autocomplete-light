@@ -1,25 +1,74 @@
+sudo: false
 language: python
+matrix:
+  allow_failures:
+    - python: "3.4"
+      env: REQ="-e git+https://github.com/django/django.git@master#egg=django django-taggit django-generic-m2m"
+    - python: "2.7"
+      env: REQ="-e git+https://github.com/django/django.git@master#egg=django django-taggit django-generic-m2m"
+  exclude:
+    # Python 3 is not supported with Django < 1.5.
+    - python: "3.4"
+      env: REQ="django<1.5 django-taggit django-generic-m2m"
+    # Skip specific / single combinations for Python 2.
+    - python: "2.7"
+      env: REQ="django<1.8"
+    - python: "2.7"
+      env: REQ="django<1.8 django-generic-m2m"
+    - python: "2.7"
+      env: REQ="django<1.8 django-taggit"
 python:
   - "2.7"
+  - "3.4"
 env:
-  - DJANGO=1.4.2
-  - DJANGO=1.5.4
+  global:
+    # Create wheels (skips existing ones from the cached wheelhouse).
+    - export PIP_FIND_LINKS=$PWD/wheelhouse/
+  matrix:
+    - REQ="django<1.5 django-taggit django-generic-m2m"
+    - REQ="django<1.6 django-taggit django-generic-m2m"
+    - REQ="django<1.7 django-taggit django-generic-m2m"
+    # Current stable Django.
+    - REQ="django<1.8"
+    - REQ="django<1.8 django-taggit django-generic-m2m"
+    - REQ="django<1.8 django-generic-m2m"
+    - REQ="django<1.8 django-taggit"
+    # django-master.
+    - REQ="-e git+https://github.com/django/django.git@master#egg=django django-taggit django-generic-m2m"
 install:
-  - pip install -q Django==$DJANGO --use-mirrors
-  - pip install pep8 --use-mirrors
-  - pip install https://github.com/dcramer/pyflakes/tarball/master
-  - pip install -r test_project/requirements.txt
-  - pip install -q -e . --use-mirrors
+  - pip install -U pip
+
+  # NOTE: Django 1.4 wheel is broken; skip it (https://github.com/django/django/pull/2438).
+  - if [[ $REQ != "django<1.5 django-taggit django-generic-m2m" ]]; then pip wheel $REQ; fi
+  - pip wheel pep8 coveralls
+  - pip wheel -r test_project/test_requirements.txt
+
+  # Install from wheelhouse.
+  # NOTE: Django 1.4 wheel is broken; skip it (https://github.com/django/django/pull/2438).
+  - if [[ $REQ == "django<1.5 django-taggit django-generic-m2m" ]]; then pip install $REQ; fi
+  - export PIP_NO_INDEX=1
+  - pip install $REQ pep8 coveralls
+  - pip install -r test_project/test_requirements.txt
+  - pip install -e .
+  - pip freeze
 before_script:
-  - "pep8 --exclude=tests,migrations --ignore=E124,E128 autocomplete_light"
+  - "pep8 --exclude=example_apps,tests,migrations --ignore=E124,E128 autocomplete_light"
+  - psql -c 'create database autocomplete_light_test;' -U postgres
+before_install:
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
 script:
-  - python setup.py test
+  - coverage run --source=autocomplete_light test_project/manage.py test --traceback autocomplete_light --settings=test_project.settings_postgres
+after_success:
+  - coveralls
 notifications:
-  irc: 
-    channels: 
-      - "irc.freenode.org#neoskills"
+  irc:
+    channels:
       - "irc.freenode.org#yourlabs"
     template:
       - "%{repository} (%{commit} %{author}) : %{message} %{build_url} %{compare_url}"
+
+# Persistent cache across builds (http://docs.travis-ci.com/user/caching/).
+cache:
+  directories:
+    $PWD/wheelhouse/

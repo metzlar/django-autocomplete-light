@@ -17,6 +17,11 @@ class AutocompleteListMock(autocomplete_light.AutocompleteListBase):
 class AutocompleteListTestCase(AutocompleteTestCase):
     autocomplete_mock = AutocompleteListMock
 
+    def test_empty_list_choices(self):
+        mock = self.autocomplete_mock(request=make_get_request('q=t'))
+        mock.choices = []
+        mock.choices_for_request()
+
     def get_choices_for_values_tests(self):
         tests = (
             {
@@ -63,16 +68,16 @@ class AutocompleteListTestCase(AutocompleteTestCase):
         return (
             {
                 'fixture': make_get_request('q=t'),
-                'expected': u''.join([
-                    '<span class="div" data-value="Ten">Ten</span>',
-                    '<span class="div" data-value="Three">Three</span>',
+                'expected': ''.join([
+                    '<span data-value="Ten">Ten</span>',
+                    '<span data-value="Three">Three</span>',
                 ])
             },
             {
                 'fixture': make_get_request(),
-                'expected': u''.join([
-                    '<span class="div" data-value="Four">Four</span>',
-                    '<span class="div" data-value="One">One</span>',
+                'expected': ''.join([
+                    '<span data-value="Four">Four</span>',
+                    '<span data-value="One">One</span>',
                 ])
             },
         )

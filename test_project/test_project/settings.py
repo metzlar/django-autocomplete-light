@@ -1,22 +1,11 @@
 # Django settings for test_project project.
-
 import os.path
-import posixpath
-
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+import django
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
-ADMINS = (
-    # ('Your Name', 'your_email@example.com'),
-)
-
-FIXTURE_DIRS = [
-    os.path.join(PROJECT_ROOT, 'fixtures'),
-]
-
-MANAGERS = ADMINS
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 DATABASES = {
     'default': {
@@ -29,160 +18,26 @@ DATABASES = {
     }
 }
 
-TEMPLATE_CONTEXT_PROCESSORS = ('django.contrib.auth.context_processors.auth',
- "django.core.context_processors.debug",
- 'django.core.context_processors.debug',
- 'django.core.context_processors.i18n',
- 'django.core.context_processors.media',
- 'django.core.context_processors.static',
- 'django.core.context_processors.request',
- 'django.core.context_processors.tz',
- 'django.contrib.messages.context_processors.messages')
+FIXTURE_DIRS = [
+    os.path.join(PROJECT_ROOT, 'fixtures'),
+]
 
-
-# Local time zone for this installation. Choices can be found here:
-# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
-# although not all choices may be available on all operating systems.
-# On Unix systems, a value of None will cause Django to use the same
-# timezone as the operating system.
-# If running in a Windows environment this must be set to the same as your
-# system time zone.
-TIME_ZONE = 'America/Chicago'
-
-# Language code for this installation. All choices can be found here:
-# http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'en'
-
-# needed for hvad
-LANGUAGES = (
-  ('de', 'German'),
-  ('en', 'English'),
-)
-
-SITE_ID = 1
-
-# If you set this to False, Django will make some optimizations so as not
-# to load the internationalization machinery.
-USE_I18N = True
-
-# If you set this to False, Django will not format dates, numbers and
-# calendars according to the current locale.
-USE_L10N = True
-
-# If you set this to False, Django will not use timezone-aware datetimes.
-USE_TZ = True
-
-# Absolute filesystem path to the directory that will hold user-uploaded files.
-# Example: "/home/media/media.lawrence.com/media/"
-MEDIA_ROOT = ''
-
-# URL that handles the media served from MEDIA_ROOT. Make sure to use a
-# trailing slash.
-# Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
-MEDIA_URL = ''
-
-# Absolute path to the directory static files should be collected to.
-# Don't put anything in this directory yourself; store your static files
-# in apps' "static/" subdirectories and in STATICFILES_DIRS.
-# Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = ''
-
-# URL prefix for static files.
-# Example: "http://media.lawrence.com/static/"
-STATIC_URL = '/static/'
-
-# Additional locations of static files
 STATICFILES_DIRS = (
     os.path.join(PROJECT_ROOT, 'static'),
 )
 
-# List of finder classes that know how to find static files in
-# various locations.
-STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
-)
-
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = 'mzdvd*#0=$g(-!v_vj_7^(=zrh3klia(u&amp;cqd3nr7p^khh^ui#'
-
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
-)
-
-MIDDLEWARE_CLASSES = (
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    # Uncomment the next line for simple clickjacking protection:
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
-
-ROOT_URLCONF = 'test_project.urls'
-
-# Python dotted path to the WSGI application used by Django's runserver.
-WSGI_APPLICATION = 'test_project.wsgi.application'
-
 TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
     os.path.join(PROJECT_ROOT, 'templates'),
 )
 
-INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.sites',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    # Uncomment the next line to enable the admin:
-    'django.contrib.admin',
-    'generic_inline',
-    'cities_light',
-    'table_autocomplete',
-    'djangorestframework',
-    'south',
-    'project_specific',
-    'autocomplete_light',
-    'charfield_pk_autocomplete',
-    'charfield_autocomplete',
-    'fk_autocomplete',
-    'gfk_autocomplete',
-    'optionnal_gfk_autocomplete',
-    'genericm2m',
-    'generic_m2m_autocomplete',
-    'admin_test_autocomplete',
-    'dependant_autocomplete',
-    'm2m_autocomplete',
-    'navigation_autocomplete',
-    'docs_autocomplete',
-    'inlines_outside_admin',
-    'tagging',
-    'template_autocomplete',
-    'non_admin',
-    'non_id_foreignkey',
-    # test models
-    'autocomplete_light.tests',
-    'non_admin_add_another',
-    'support_sandino',
-    'default_template_autocomplete',
-    'ajax_create',
+MIDDLEWARE_CLASSES = (
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-# A sample logging configuration. The only tangible logging
-# performed by this configuration is to send an email to
-# the site admins on every HTTP 500 error when DEBUG=False.
-# See http://docs.djangoproject.com/en/dev/topics/logging for
-# more details on how to customize your logging configuration.
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -214,4 +69,81 @@ LOGGING = {
             'level':'DEBUG',
         },
     }
+}
+
+# Hosts/domain names that are valid for this site; required if DEBUG is False
+# See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
+ALLOWED_HOSTS = []
+
+SITE_ID = 1
+
+STATIC_URL = '/static/'
+
+# Make this unique, and don't share it with anybody.
+SECRET_KEY = '^le6=#%$1z63o!#z^qr(r+^ix&iqx)@h*u$@8$bu&n8cv6m)go'
+
+ROOT_URLCONF = 'test_project.urls'
+
+# Python dotted path to the WSGI application used by Django's runserver.
+WSGI_APPLICATION = 'test_project.wsgi.application'
+
+INSTALLED_APPS = (
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.sites',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.admin',
+
+    'cities_light',
+
+    'autocomplete_light',
+    'autocomplete_light.example_apps.basic',
+    'autocomplete_light.example_apps.music',
+    'autocomplete_light.example_apps.autocomplete_test_case_app',
+    'autocomplete_light.example_apps.security_test',
+    'autocomplete_light.example_apps.dependant_autocomplete',
+    'autocomplete_light.example_apps.non_admin_add_another',
+    'autocomplete_light.example_apps.create_choice_on_the_fly',
+
+    'navigation_autocomplete',
+)
+
+
+if django.VERSION < (1, 7):
+    INSTALLED_APPS += ('south',)
+elif django.VERSION >= (1, 7):
+    INSTALLED_APPS += (
+        'autocomplete_light.example_apps.app_config_with_registry_file',
+        'autocomplete_light.example_apps.app_config_without_registry_file.apps.AppConfigWithoutRegistryFile',
+    )
+
+if django.VERSION >= (1, 5):
+    INSTALLED_APPS += (
+        'vote',
+        'autocomplete_light.example_apps.unuseable_virtualfield',
+    )
+
+try:
+    import genericm2m
+except ImportError:
+    pass
+else:
+    INSTALLED_APPS += ('genericm2m',)
+
+try:
+    import taggit
+except ImportError:
+    pass
+else:
+    INSTALLED_APPS += ('taggit',)
+
+SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
+
+TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
+
+SOUTH_MIGRATION_MODULES = {
+    'taggit': 'taggit.south_migrations',
+    'cities_light': 'cities_light.south_migrations',
 }

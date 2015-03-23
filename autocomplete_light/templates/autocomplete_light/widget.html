@@ -4,19 +4,13 @@
 {% load url from future %}
 
 {% block widget_open %}
-<span class="autocomplete-light-widget {{ name }}
-    {% if widget.widget_js_attributes.max_values == 1 %}single{% else %}multiple{% endif %}"
-    id="{{ widget.html_id }}-wrapper"
-    {{ widget.widget_js_attributes|autocomplete_light_data_attributes }}
-    {{ widget.autocomplete_js_attributes|autocomplete_light_data_attributes:'autocomplete-' }}
-    >
+<span id="{{ widget.html_id }}-wrapper" {{ widget_attrs }} >
 {% endblock %}
 
 {% block deck %}
     {# a deck that should contain the list of selected options #}
-    {{ choices }}
-    <span id="{{ widget.html_id }}-deck" class="deck div" >
-        {% for choice in autocomplete.choices_for_values %}
+    <span id="{{ widget.html_id }}-deck" class="deck" >
+        {% for choice in choices %}
             {{ choice|autocomplete_light_choice_html:autocomplete }}
         {% endfor %}
     </span>
@@ -24,13 +18,13 @@
 
 {% block input %}
     {# a text input, that is the 'autocomplete input' #}
-    <input type="text" name="{{ name }}-autocomplete" id="{{ widget.html_id }}_text" value="" {{ extra_attrs }} />
+    <input type="text" name="{{ name }}-autocomplete" id="{{ widget.html_id }}-autocomplete" value="" {{ attrs }} />
 {% endblock %}
 
 {% block add_another %}
     {# A link to add a new choice using a popup #}
     {% if autocomplete.add_another_url_name %}
-    <a href="{% block add_another_href %}{% url autocomplete.add_another_url_name %}?_popup=1{% endblock %}" class="autocomplete-add-another" id="add_{{ widget.html_id }}" style="display:none;">
+    <a href="{% block add_another_href %}{{ autocomplete.get_add_another_url }}{% endblock %}" class="autocomplete-add-another" id="add_{{ widget.html_id }}" style="display:none;">
         <img src="{% static 'admin/img/icon_addlink.gif' %}" width="10" height="10" alt="{% trans 'Add another' %}" />
     </a>
     {% endif %}
@@ -46,22 +40,22 @@
 {% endblock %}
 
 {% block remove_template %}
-    {# a hidden div that serves as template for the 'remove from deck' button #}
-    <span style="display:none" class="remove div">
+    {# a hidden element that serves as template for the 'remove from deck' button #}
+    <span style="display:none" class="remove">
         {# This will be appended to choices on the deck, it's the remove button #}
-        X
+        ˣ
     </span>
 {% endblock %}
 
 {% block choice_template %}
-    <span style="display:none" class="choice-template div">
+    <span style="display:none" class="choice-template">
         {% comment %}
         the contained element will be used to render options that are added to the select
         via javascript, for example in django admin with the + sign
 
         The text of the option will be inserted in the html of this tag
         {% endcomment %}
-        <span class="choice div prepend-remove append-option-html">
+        <span class="choice prepend-remove append-option-html">
         </span>
     </span>
 {% endblock %}

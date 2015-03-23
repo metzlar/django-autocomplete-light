@@ -1,6 +1,7 @@
 from django import http
 from django.views import generic
 from django.views.generic import base
+from django.utils.encoding import force_text
 
 import autocomplete_light
 
@@ -11,13 +12,14 @@ class RegistryView(base.TemplateView):
     template_name = 'autocomplete_light/registry.html'
 
     def get(self, request, *args, **kwargs):
-        if not request.user.is_staff:
+        if not request.user.is_superuser:
             return http.HttpResponseForbidden()
         return super(RegistryView, self).get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         return {
             'registry': autocomplete_light.registry,
+            'registry_items': autocomplete_light.registry.items(),
         }
 
 
@@ -46,7 +48,7 @@ class AutocompleteView(generic.View):
         try:
             autocomplete_class = autocomplete_light.registry[
                 kwargs['autocomplete']]
-        except KeyError:
+        except autocomplete_light.AutocompleteNotRegistered:
             return http.HttpResponseNotFound()
         autocomplete = autocomplete_class(request=request)
         return http.HttpResponse(autocomplete.autocomplete_html())
@@ -75,12 +77,12 @@ class CreateView(generic.CreateView):
             obj = self.object
 
         html = []
-        html.append(u'<script type="text/javascript">')
-        html.append(u'opener.dismissAddAnotherPopup( window, "%s", "%s" );' % (
-            unicode(obj.pk), unicode(obj).replace('"', '\\"')))
-        html.append(u'</script>')
+        html.append('<script type="text/javascript">')
+        html.append('opener.dismissAddAnotherPopup( window, "%s", "%s" );' % (
+            force_text(obj.pk), force_text(obj).replace('"', '\\"')))
+        html.append('</script>')
 
-        html = u''.join(html)
+        html = ''.join(html)
 
         return http.HttpResponse(html, status=201)
 

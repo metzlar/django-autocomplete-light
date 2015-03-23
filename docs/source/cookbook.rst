@@ -15,44 +15,47 @@ Various cooking recipes ``your_app/autocomplete_light_registry.py``:
     autocomplete_light.register(SomeModel)
 
     # If NewModel.get_absolute_url or get_absolute_update_url is defined, this
-    # will look more fancey
+    # will look more fancy
     autocomplete_light.register(NewModel,
         autocomplete_light.AutocompleteModelTemplate)
 
     # Extra **kwargs are used as class properties in the subclass.
     autocomplete_light.register(SomeModel,
         # SomeModel is already registered, re-register with custom name
-        name='AutocompleSomeModelNew',
+        name='AutocompleteSomeModelNew',
         # Filter the queryset
         choices=SomeModel.objects.filter(new=True))
 
     # It is possible to override javascript options from Python.
     autocomplete_light.register(OtherModel,
-        autocomplete_js_attributes={
-            # This will actually data-minimum-characters which
+        attrs={
+            # This will actually data-autocomplete-minimum-characters which
             # will set widget.autocomplete.minimumCharacters.
-            'minimum_characters': 0, 
+            'data-autocomplete-minimum-characters': 0,
             'placeholder': 'Other model name ?',
         }
     )
 
     # But you can make your subclass yourself and override methods.
-    class AutocompleteYourModel(autocomplete_light.AutocompleteModelTemplate):
+    class YourModelAutocomplete(autocomplete_light.AutocompleteModelTemplate):
         template_name = 'your_app/your_special_choice_template.html'
 
-        autocomplete_js_attributes = {
-            'minimum_characters': 4, 
+        attrs = {
+            'data-mininum-minimum-characters': 4,
+            'placeholder': 'choose your model',
         }
 
-        widget_js_attributes = {
-            # That will set data-max-values which will set widget.maxValues
-            'max_values': 6,
+        widget_attrs = {
+            # That will set widget.maximumValues, naming conversion is done by
+            # jQuery.data()
+            'data-widget-maximum-values': 6,
+            'class': 'your-custom-class',
         }
 
         def choices_for_request(self):
             """ Return choices for a particular request """
-            return super(AutocompleteYourModel, self).choices_for_request(
-                ).exclude(extra=self.request.GET['extra'])
+            self.choices = self.choices.exclude(extra=self.request.GET['extra'])
+            return super(YourModelAutocomplete, self).choices_for_request()
 
     # Just pass the class to register and it'll subclass it to be thread safe.
     autocomplete_light.register(YourModel, YourModelAutocomplete)
@@ -65,35 +68,34 @@ Various cooking recipes ``your_app/autocomplete_light_registry.py``:
         # Extra **kwargs passed to register have priority.
         choice_template='your_app/other_template.html')
 
-Various cooking recipes far ``your_app/forms.py``:
+Various cooking recipes for ``your_app/forms.py``:
 
 .. code-block:: python
 
     # Use as much registered autocompletes as possible.
-    SomeModelForm = autocomplete_light.modelform_factory(SomeModel, 
+    SomeModelForm = autocomplete_light.modelform_factory(SomeModel,
         exclude=('some_field'))
 
-    # Same with a custom modelform, using Meta.get_widgets_dict().
-    class CustomModelForm(forms.ModelForm):
+    # Same with a custom autocomplete_light.ModelForm
+    class CustomModelForm(autocomplete_light.ModelForm):
+        # autocomplete_light.ModelForm will set up the fields for you
         some_extra_field = forms.CharField()
 
         class Meta:
             model = SomeModel
-            widgets = autocmoplete_light.get_widgets_dict(SomeModel)
 
-    # Using widgets directly in any kind of form.
+    # Using form fields directly in any kind of form
     class NonModelForm(forms.Form):
-        user = forms.ModelChoiceField(User.objects.all(),
-            widget=autocomplete_light.ChoiceWidget('UserAutocomplete'))
+        user = autocomplete_light.ModelChoiceField('UserAutocomplete')
 
-        cities = forms.ModelMultipleChoiceField(City.objects.all(),
+        cities = autocomplete_light.ModelMultipleChoiceField('CityAutocomplete',
             widget=autocomplete_light.MultipleChoiceWidget('CityAutocomplete',
                 # Those attributes have priority over the Autocomplete ones.
-                autocomplete_js_attributes={'minimum_characters': 0,
-                                            'placeholder': 'Choose 3 cities ...'},
-                widget_js_attributes={'max_values': 3}))
+                attrs={'data-autocomplete-minimum-characters': 0,
+                       'placeholder': 'Choose 3 cities ...'},
+                widget_attrs={'data-widget-maximum-values': 3}))
 
-        tags = autocomplete_light.TextWidget('TagAutocomplete')
+        tags = forms.TextField(widget=autocomplete_light.TextWidget('TagAutocomplete'))
 
 Low level basics
 ````````````````
@@ -149,7 +151,7 @@ manually for example to make a navigation autocomplete like facebook:
         },
     });
 
-    // autocomplete.js doesn't do anything but trigger selectChoice when 
+    // autocomplete.js doesn't do anything but trigger selectChoice when
     // an option is selected, let's enable some action:
     $('#yourInput').bind('selectChoice', function(e, choice, autocomplete) {
         window.location.href = choice.attr('href');
@@ -159,7 +161,7 @@ manually for example to make a navigation autocomplete like facebook:
     $('#yourInput').yourlabsAutocomplete({
         url: '{% url "your_autocomplete_url" %}',
         choiceSelector: 'a',
-    }).bind('selectChoice', function(e, choice, autocomplete) {
+    }).input.bind('selectChoice', function(e, choice, autocomplete) {
         window.location.href = choice.attr('href');
     });
 
@@ -174,7 +176,7 @@ Using `widget.js` is pretty much the same:
             choiceSelector: '[data-id]',
         },
         // Override some widget options, allow 3 choices:
-        maxValues: 3,
+        maximumValues: 3,
         // or method:
         getValue: function(choice) {
             return choice.data('id'),
@@ -203,24 +205,32 @@ Hence the widget.js HTML cookbook:
 
 .. code-block:: html
 
-    <!-- 
+    <!--
     - class=autocomplete-light-widget: get picked up by widget.js defaults,
-    - data-bootstrap=normal: Rely on automatic bootstrap because
+    - any data-widget-* attribute will override yourlabs.Widget js option,
+    - data-widget-bootstrap=normal: Rely on automatic bootstrap because
       if don't need to override any method, but you could change
       that and make your own bootstrap, enabling you to make
-      chained autocomplete, create options, whatever ... 
-    - data-max-values: override a widget option
-    - data-minimum-characters: override an autocomplete option,
+      chained autocomplete, create options, whatever ...
+    - data-widget-maximum-values: override a widget option maximumValues, note
+      that the naming conversion is done by jQuery.data().
     -->
-    <span 
+    <span
         class="autocomplete-light-widget"
-        data-bootstrap="normal"
-        data-max-values="3"
-        data-minimum-characters="0"
+        data-widget-bootstrap="normal"
+        data-widget-maximum-values="3"
     >
 
-        <!-- Expected structure: have an input -->
-        <input type="text" id="some-unique-id" />
+        <!-- 
+        Expected structure: have an input, it can set override default
+        autocomplete options with data-autocomplete-* attributes, naming
+        conversion is done by jQuery.data().
+        -->
+        <input 
+            type="text" 
+            data-autocomplete-minimum-characters="0"
+            data-autocomplete-url="/foo" 
+        />
 
         <!--
         Default expected structure: have a .deck element to append selected
@@ -232,7 +242,7 @@ Hence the widget.js HTML cookbook:
         </span>
 
         <!--
-        Default expected structue: have a multiple select.value-select:
+        Default expected structure: have a multiple select.value-select:
         -->
         <select style="display:none" class="value-select" name="your_input" multiple="multiple">
             <!-- If option 1234 was already selected: -->

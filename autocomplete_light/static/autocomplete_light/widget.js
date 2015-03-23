@@ -57,7 +57,7 @@ yourlabs.Widget = function(widget) {
 
     // The number of choices that the user may select with this widget. Set 0
     // for no limit. In the case of a foreign key you want to set it to 1.
-    this.maxValues = 0;
+    this.maximumValues = 0;
     
     // Clear input when choice made? 1 for yes, 0 for no
     this.clearInputOnSelectChoice = "1";
@@ -71,12 +71,10 @@ yourlabs.Widget.prototype.getValue = function(choice) {
 
 // The widget is in charge of managing its Autocomplete.
 yourlabs.Widget.prototype.initializeAutocomplete = function() {
-    this.autocomplete = this.input.yourlabsAutocomplete(
-        this.autocompleteOptions);
+    this.autocomplete = this.input.yourlabsAutocomplete()
 
     // Add a class to ease css selection of autocompletes for widgets
-    this.autocomplete.box.addClass(
-        'autocomplete-light-widget');
+    this.autocomplete.box.addClass('autocomplete-light-widget');
 };
 
 // Bind Autocomplete.selectChoice signal to Widget.selectChoice()
@@ -123,9 +121,9 @@ yourlabs.Widget.prototype.selectChoice = function(choice) {
 // Unselect a value if the maximum number of selected values has been
 // reached.
 yourlabs.Widget.prototype.freeDeck = function() {
-    var slots = this.maxValues - this.deck.children().length;
+    var slots = this.maximumValues - this.deck.children().length;
 
-    if (this.maxValues && slots < 1) {
+    if (this.maximumValues && slots < 1) {
         // We'll remove the first choice which is supposed to be the oldest
         var choice = $(this.deck.children()[0]);
 
@@ -133,11 +131,11 @@ yourlabs.Widget.prototype.freeDeck = function() {
     }
 }
 
-// Empty the search input and hide it if maxValues has been reached.
+// Empty the search input and hide it if maximumValues has been reached.
 yourlabs.Widget.prototype.resetDisplay = function() {
     var selected = this.select.find('option:selected').length;
 
-    if (this.maxValues && selected == this.maxValues) {
+    if (this.maximumValues && selected == this.maximumValues) {
         this.input.hide();
     } else {
         this.input.show();
@@ -172,7 +170,8 @@ yourlabs.Widget.prototype.optionChoice = function(option) {
 }
 
 yourlabs.Widget.prototype.addRemove = function(choices) {
-    var removeTemplate = this.widget.find('.remove:last').clone().show();
+    var removeTemplate = this.widget.find('.remove:last')
+        .clone().css('display', 'inline-block');
 
     var target = choices.find('.prepend-remove');
 
@@ -290,8 +289,9 @@ yourlabs.Widget.prototype.destroy = function(widget) {
 $.fn.yourlabsWidget = function(overrides) {
     var overrides = overrides ? overrides : {};
 
+    var widget = this.yourlabsRegistry('widget');
+
     if (overrides == 'destroy') {
-        var widget = this.data('widget');
         if (widget) {
             widget.destroy(this);
             this.removeData('widget');
@@ -299,32 +299,23 @@ $.fn.yourlabsWidget = function(overrides) {
         return
     }
 
-    if (this.data('widget') == undefined) {
+    if (widget == undefined) {
         // Instanciate the widget
         var widget = new yourlabs.Widget(this);
 
-        // Pares data-*
-        var data = this.data();
-        var dataOverrides = {autocompleteOptions: {}};
-        for (var key in data) {
+        // Extend the instance with data-widget-* overrides
+        for (var key in this.data()) {
             if (!key) continue;
-
-            if (key.substr(0, 12) == 'autocomplete') {
-                var newKey = key.replace('autocomplete', '');
-                newKey = newKey.replace(newKey[0], newKey[0].toLowerCase())
-                dataOverrides['autocompleteOptions'][newKey] = data[key];
-            } else {
-                dataOverrides[key] = data[key];
-            }
+            if (key.substr(0, 6) != 'widget' || key == 'widget') continue;
+            var newKey = key.replace('widget', '');
+            var newKey = newKey.charAt(0).toLowerCase() + newKey.slice(1);
+            widget[newKey] = this.data(key);
         }
-
-        // Allow attribute overrides
-        widget = $.extend(widget, dataOverrides);
 
         // Allow javascript object overrides
         widget = $.extend(widget, overrides);
 
-        this.data('widget', widget);
+        $(this).yourlabsRegistry('widget', widget);
 
         // Setup for usage
         widget.initialize();
@@ -334,15 +325,15 @@ $.fn.yourlabsWidget = function(overrides) {
         widget.widget.trigger('widget-ready');
     }
 
-    return this.data('widget');
+    return widget;
 }
 
 $(document).ready(function() {
-    $('body').on('initialize', '.autocomplete-light-widget[data-bootstrap=normal]', function() {
+    $('body').on('initialize', '.autocomplete-light-widget[data-widget-bootstrap=normal]', function() {
         /*
-        Only setup widgets which have data-bootstrap=normal, if you want to
+        Only setup widgets which have data-widget-bootstrap=normal, if you want to
         initialize some Widgets with custom code, then set
-        data-boostrap=yourbootstrap or something like that.
+        data-widget-boostrap=yourbootstrap or something like that.
         */
         $(this).yourlabsWidget();
     });
@@ -359,6 +350,7 @@ $(document).ready(function() {
     });
 
     // Solid initialization, usage:
+    //
     //
     //      $(document).bind('yourlabsWidgetReady', function() {
     //          $('.your.autocomplete-light-widget').on('initialize', function() {
@@ -406,14 +398,11 @@ $(document).ready(function() {
                 widget.selectChoice(deckChoice);
             }
         } else { // added a widget ?
-            var widget = $(e.target).find('.autocomplete-light-widget');
+            var notReady = '.autocomplete-light-widget:not([data-widget-ready])'
+            var widget = $(e.target).find(notReady);
 
             if (!widget.length) {
-                widget = $(e.target).is('.autocomplete-light-widget') ? $(e.target) : false;
-
-                if (!widget) {
-                    return;
-                }
+                return;
             }
 
             // Ignore inserted autocomplete box elements.
@@ -430,4 +419,25 @@ $(document).ready(function() {
             widget.trigger('initialize');
         }
     });
+    
+    var ie = yourlabs.getInternetExplorerVersion();
+    if (ie != -1 && ie < 9) {
+        observe = [
+            '.autocomplete-light-widget:not([data-yourlabs-skip])',
+            '.autocomplete-light-widget option:not([data-yourlabs-skip])'
+        ].join();
+        $(observe).attr('data-yourlabs-skip', 1);
+
+        function ieDOMNodeInserted() {
+            // http://msdn.microsoft.com/en-us/library/ms536957
+            $(observe).each(function() {
+                $(document).trigger(jQuery.Event('DOMNodeInserted', {target: $(this)}));
+                $(this).attr('data-yourlabs-skip', 1);
+            });
+
+            setTimeout(ieDOMNodeInserted, 500);
+        }
+        setTimeout(ieDOMNodeInserted, 500);
+    }
+
 });

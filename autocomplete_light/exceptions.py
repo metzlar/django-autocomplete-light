@@ -8,8 +8,28 @@ class AutocompleteNotRegistered(AutocompleteLightException):
     def __init__(self, name, registry):
         if registry.keys():
             msg = '%s not registered, you have registered: %s' % (name,
-                    registry.keys())
+                    list(registry.keys()))
         else:
             msg = '%s not registered (registry is empty)' % name
 
         super(AutocompleteNotRegistered, self).__init__(msg)
+
+
+class AutocompleteArgNotUnderstood(AutocompleteLightException):
+    """
+    Raised by AutocompleteRegistry.get_autocomplete_from_arg when it cannot
+    understand the argument.
+    """
+    def __init__(self, arg, registry):
+        msg = '%s not understod by get_autocomplete_from_arg()' % arg
+        super(AutocompleteArgNotUnderstood, self).__init__(msg)
+
+
+class NoGenericAutocompleteRegistered(AutocompleteLightException):
+    """
+    Raised by AutocompleteRegistry.autocomplete_for_generic when no generic
+    autocomplete has been registered.
+    """
+    def __init__(self, registry):
+        msg = 'No generic autocomplete was registered.'
+        super(NoGenericAutocompleteRegistered, self).__init__(msg)

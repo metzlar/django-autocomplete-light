@@ -1,3 +1,187 @@
+2.0.9:
+
+    - #257: Got rid of RemovedInDjango18Warning deprecation warnings.
+    - #371: Skip unuseable virtualfields, like VoteManager for django-vote. 
+    - #372: New PEP8 E731 support.
+
+2.0.7:
+
+    - Removed unused module (autocomplete_light.generic),
+    - choices_for_request: assert that search_fields is not a string
+    - #354: Choices=[] should not crash.
+    - also: cleaned 2.x, code coverage increase
+    - also: stable/2.x.x deprecated in favor of master
+    - also: tests against django (1.8) master enabled but allowed to fail
+    - also: promoted @blueyed to core-dev, rock'on B)
+
+2.0.6: #282: add-another in admin too (see message for 02a555cef3d)
+
+2.0.5: Code removal
+
+2.0.4: #347: Django 1.7 AppConfig support
+
+2.0.3: #337: Fixed error in text_widget.js
+
+2.0.2
+
+    - #334: Fixed display of autocomplete with clearfix (by @madEng84)
+    - #336: Added compiled po files
+    - #335: Removed debug statement
+
+2.0.1: Initial stable release
+
+2.0.0a18: #292: Enable clear-ing nullable GFKs with the form.
+
+2.0.0a17: #280: Do not depend on django on install.
+
+2.0.0a16:
+
+    - #252: Not all INSTALLED_APPS are modules (Django 1.7),
+    - #270: SelectMultipleHelpTextRemovalMixin multiple language support,
+    - #267: Delegate add-another url generation to Autocomplete class,
+    - #269: make build_widget_attrs thread-safe,
+    - #250: Fix ChoiceField.get_choices(),
+    - #192: Auto-load local jquery if not loaded already,
+    - Django 1.7b2 support.
+
+2.0.0a15:
+
+    - Honor Meta.widgets,
+    - Added .modern-style class for autocomplete widget,
+
+2.0.0a14: Added missing extensions to MANIFEST
+
+2.0.0a13: Fix #244: Added ajax loading in input.autocomplete.
+
+2.0.0a12: !! BC BREAK !! Renamed input_attrs to attrs to be consistent
+                         with django.
+
+2.0.0a11:
+
+    - #241 IE11 compatibility fix on text autocomplete contributed by Jonathan
+      Wiklund (@MaZZly)
+      
+
+2.0.0a10:
+
+    - Implemented autocomplete_names support to override the default
+      Autocomplete class used for a given model form field,
+    - Make the first Autocomplete class the default autocomplete (for generic
+      and model).
+    - Implemented lazy autocompletes: you can refer to an autocomplete class
+      before it is discovered.
+    - Import TaggitField and TaggitWidget in autocomplete_light.
+
+2.0.0a9:
+
+    - Fix #219: autocompletes now convert None value to an empty list, as
+      Autocomplete promises that values is a list. (Fixed gfk in inlines)
+    - Fix #226: improved css/js positioning.
+    - Fix #231: widget.js was re-initializing widgets.
+    - Fixed taggit support
+    - Fix: label was not set for gmtm and gfk in inlines.
+
+2.0.0a8:
+
+    - Updated pt_BR translation contributed by Fábio C. Barrionuevo da Luz (@luzfcb).
+
+2.0.0a7:
+
+    - Removed a layer of complexity by trading autocomplete_js_attributes and
+      widget_js_attributes for attrs (for input/autocomplete object) and widget_attrs
+      (for widget container/widget js object).
+    - Fixed naming conventions issues:
+        - #124: css class .choiceDetail should be .choice-detail, same for
+          .choiceUpdate
+        - #97: rename .div css class to .block,
+    - Fixed #84: data-autocomplete-placeholder is gone in favor of the
+      placeholder attribute.
+    - Fixed #82: data-* is not parsed anymore by yourlabs.Widget, data-widget-*
+      is parsed for options instead.
+    - Fixed #81: js Autocomplete object now parses data-autocomplete-* for
+      options,
+    - Fixed #80: js maxValues is now maximumValues.
+    - Fixed #27: refactored selenium tests to be able to test any example app.
+    - Bugfix: get_autocomplete_from_arg returned wrong autocomplete in two cases
+
+2.0.0a6:
+
+    - Simplified widget template selection.
+
+2.0.0a5:
+
+    - Support for Django 1.6's ModelForm.Meta.fields = '__all__', generic fk
+      and generic m2m autocomplete fields were not created.
+
+2.0.0a4:
+
+    - Fix #204: Restore AutocompleteModelBase as default,
+    - Fix #205: Support Python3 in views,
+    - Fixed 404 response in AutocompleteView.
+
+2.0.0a3:
+
+    - Do not interfere with non-autocomplete-enabled form fields,
+    - Ported taggit support to Python3,
+    - Renamed TaggitTagField to TaggitField and integrated TaggitField into
+      autocomplete_light.ModelForm,
+
+2.0.0a2:
+
+    - Make AutocompleteModelTemplate the default autocomplete base for models.
+    - Added ChoiceField and MultipleChoiceField.
+    - Renamed .div class to .block, backward compatibility is preserved.
+    - BC Break: Restyled autocomplete widget to look more modern. If you want
+      the old style back, include autocomplete_light/old_style.css.
+
+2.0.0a1:
+
+    - Fix #168: ensure that autocompletion inputs behaves like django
+      when it comes to values that were removed from the queryset.
+
+2.0.0pre:
+
+    There are minor backward compatibility breaks due to the
+    reorganization of form classes. The best way to upgrade is to
+    inherit from autocomplete_light.ModelForm.
+
+    - autocomplete_light.FixedModelForm was renamed to
+      autocomplete_light.SelectMultipleHelpTextRemovalMixin and is now
+      a mixin for ModelForm. Inherit from both that and
+      django.forms.ModelForm to get the same.
+    - GenericModelForm was renamed to
+      GenericM2MRelatedObjectDescriptorHandlingMixin and is now a mixin
+      for ModelForm. Inherit from both that and django.forms.ModelForm
+      to get the same.
+    - get_widgets_dict is gone, because we now favor using form fields
+      which do validation where it's due: on POST.
+    - using widgets should still work, but using the new form fields is
+      better because it enables DRY validation: you don't have to
+      hardcode the queryset on the form field definition anymore.
+
+    To fix those, just inherit from autocomplete_light.ModelForm if
+    possible, else check the form API details in the source or 
+    generated API documentation:
+
+    - http://django-autocomplete-light.readthedocs.org/en/v2/form.html#module-autocomplete_light.forms
+
+    New features:
+
+    - Added form fields, which are now in charge of validation,
+    - Added ModelForm which includes all features previously provided as
+      separated tools (generic m2m support, django issue #9321, etc, etc ...)
+      and overrides django's form field generator to automatically use
+      autocomplete fields when possible, even for generic relations.
+    - Python3 support.
+    - Tests rely on apps provided in the autocomplete_light.tests.apps
+      submodule instead of those provided by test_project. This make tests
+      potentially runnable on a user project (except that the user project
+      still needs to add those apps in INSTALLED_APPS).
+
+1.4.9: Fix #193: IE8 support hacks.
+
+1.4.8: Fix #195: RegistryView got broken on recent Django versions.
+
 1.4.7:
 
     - Fix #190: Remove Django 1.6 Depreciation Warning,

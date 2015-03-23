@@ -1,9 +1,13 @@
-import unittest
+from __future__ import unicode_literals
 
-from autocomplete_light.templatetags.autocomplete_light_tags import *
+from django.test import TestCase
+from collections import OrderedDict
+
+from autocomplete_light.templatetags. \
+    autocomplete_light_tags import autocomplete_light_data_attributes
 
 
-class DataAttributesTestCase(unittest.TestCase):
+class DataAttributesTestCase(TestCase):
     def test_without_prefix(self):
         tests = (
             {
@@ -13,10 +17,10 @@ class DataAttributesTestCase(unittest.TestCase):
                 'expected': 'data-foo="bar"',
             },
             {
-                'fixture': {
-                    'foo': 'bar',
-                    'test_underscore': 'example',
-                },
+                'fixture': OrderedDict([
+                    ('foo', 'bar'),
+                    ('test_underscore', 'example'),
+                ]),
                 'expected': 'data-foo="bar" data-test-underscore="example"',
             },
             {
@@ -32,4 +36,4 @@ class DataAttributesTestCase(unittest.TestCase):
             result = autocomplete_light_data_attributes(test['fixture'],
                 test.get('prefix', ''))
             self.assertEqual(result, test['expected'],
-                u'Got %s for %s' % (result, test))
+                'Got %s for %s' % (result, test))

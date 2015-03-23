@@ -1,6 +1,9 @@
-from .case import *
+from __future__ import unicode_literals
 
 from django.contrib.auth.models import User
+from django.utils.encoding import force_text
+
+from .case import *
 
 
 class AutocompleteModelMock(autocomplete_light.AutocompleteModelBase):
@@ -24,20 +27,9 @@ class MultipleFormMock(forms.Form):
 class AutocompleteModelTestCase(AutocompleteTestCase):
     autocomplete_mock = AutocompleteModelMock
 
-    def setUp(self):
-        User.objects.all().delete()
-        self.abe = User(username='Abe', email='sales@example.com')
-        self.jack = User(username='Jack', email='jack@example.com')
-        self.james = User(username='James', email='sales@example.com')
-        self.john = User(username='John', email='sales@example.com')
-
-        self.abe.save()
-        self.jack.save()
-        self.james.save()
-        self.john.save()
-
     def assert_choices_equal(self, result, test):
-        self.assertEqual(list(result), test['expected'])
+        self.assertEqual([x.pk for x in result],
+                         [x.pk for x in test['expected']])
 
     def get_choices_for_values_tests(self):
         return (
@@ -119,20 +111,20 @@ class AutocompleteModelTestCase(AutocompleteTestCase):
         return (
             {
                 'fixture': make_get_request('q=j'),
-                'expected': u''.join([
-                    '<span class="div" data-value="%s">%s</span>' % (
-                        self.jack.pk, unicode(self.jack)),
-                    '<span class="div" data-value="%s">%s</span>' % (
-                        self.james.pk, unicode(self.james)),
+                'expected': ''.join([
+                    '<span data-value="%s">%s</span>' % (
+                        self.jack.pk, force_text(self.jack)),
+                    '<span data-value="%s">%s</span>' % (
+                        self.james.pk, force_text(self.james)),
                 ])
             },
             {
                 'fixture': make_get_request(),
-                'expected': u''.join([
-                    '<span class="div" data-value="%s">%s</span>' % (
-                        self.abe.pk, unicode(self.abe)),
-                    '<span class="div" data-value="%s">%s</span>' % (
-                        self.jack.pk, unicode(self.jack)),
+                'expected': ''.join([
+                    '<span data-value="%s">%s</span>' % (
+                        self.abe.pk, force_text(self.abe)),
+                    '<span data-value="%s">%s</span>' % (
+                        self.jack.pk, force_text(self.jack)),
                 ])
             },
         )
